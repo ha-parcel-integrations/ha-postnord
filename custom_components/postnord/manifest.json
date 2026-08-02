@@ -1,0 +1,16 @@
+{
+  "domain": "postnord",
+  "name": "PostNord",
+  "codeowners": [
+    "@peternijssen"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/ha-parcel-integrations/ha-postnord",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/ha-parcel-integrations/ha-postnord/issues",
+  "quality_scale": "silver",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}
