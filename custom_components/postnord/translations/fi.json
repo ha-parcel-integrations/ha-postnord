@@ -1,0 +1,145 @@
+{
+  "title": "PostNord",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Määritä PostNord",
+        "description": "Lisää PostNord-pakettien seuranta. Tiliä tai API-avainta ei tarvita. Määrityksen jälkeen voit lisätä paketteja integraation asetuksista tai `postnord.track_parcel`-palvelun kautta."
+      }
+    },
+    "abort": {
+      "already_configured": "PostNord on jo määritetty.",
+      "single_instance_allowed": "PostNord on jo määritetty."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "PostNord-asetukset",
+        "sections": {
+          "parcels": {
+            "name": "Paketit",
+            "data": {
+              "add": "Lisää paketti",
+              "remove": "Poista paketteja"
+            },
+            "data_description": {
+              "add": "Anna PostNord-seurantakoodi aloittaaksesi sen seurannan. Löydät sen lähetysvahvistuksesta tai epäonnistuneen toimituksen kortista."
+            }
+          },
+          "delivered": {
+            "name": "Toimitetut paketit",
+            "data": {
+              "delivered_filter_type": "Suodata",
+              "delivered_filter_amount": "Määrä"
+            },
+            "data_description": {
+              "delivered_filter_type": "Näytä toimitetut paketit viimeisiltä X päivältä tai rajoita X viimeisimpään.",
+              "delivered_filter_amount": "Näytettävien päivien tai pakettien määrä."
+            }
+          },
+          "history": {
+            "name": "Pakettihistoria",
+            "data": {
+              "include_history": "Sisällytä tilahistoria"
+            },
+            "data_description": {
+              "include_history": "Lisää pakettikohtainen historiaominaisuus, joka listaa jokaisen tilapäivityksen (aikaleima, tila, alkuperäinen teksti). Pois päältä oletuksena."
+            }
+          },
+          "polling": {
+            "name": "Kysely",
+            "data": {
+              "refresh_interval": "Päivitä"
+            },
+            "data_description": {
+              "refresh_interval": "Kuinka usein integraatio tarkistaa PostNordilta pakettipäivitykset. Pidempi väli kuormittaa PostNordin rajapintaa vähemmän; oletusarvo 30 minuuttia riittää useimmille paketeille."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "invalid_tracking_code": "Tämä ei näytä PostNord-seurantakoodilta.",
+      "already_tracked": "Tätä pakettia seurataan jo."
+    }
+  },
+  "selector": {
+    "refresh_interval": {
+      "options": {
+        "15": "15 minuuttia",
+        "30": "30 minuuttia",
+        "60": "60 minuuttia",
+        "120": "120 minuuttia",
+        "240": "240 minuuttia"
+      }
+    },
+    "delivered_filter_type": {
+      "options": {
+        "days": "Päivää",
+        "parcels": "Pakettien määrä"
+      }
+    }
+  },
+  "services": {
+    "track_parcel": {
+      "name": "Seuraa pakettia",
+      "description": "Aloita paketin seuranta sen PostNord-seurantakoodilla.",
+      "fields": {
+        "tracking_code": {
+          "name": "Seurantakoodi",
+          "description": "PostNord-seurantakoodi."
+        }
+      }
+    },
+    "untrack_parcel": {
+      "name": "Lopeta paketin seuranta",
+      "description": "Lopeta paketin seuranta sen PostNord-seurantakoodilla.",
+      "fields": {
+        "tracking_code": {
+          "name": "Seurantakoodi",
+          "description": "PostNord-seurantakoodi, jonka seuranta lopetetaan."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "parcel_registered": "Paketti rekisteröitiin",
+      "parcel_status_changed": "Paketin tila muuttui",
+      "parcel_delivered": "Paketti toimitettiin",
+      "parcel_delivery_time_changed": "Paketin arvioitu toimitusaika muuttui"
+    }
+  },
+  "entity": {
+    "button": {
+      "refresh": {
+        "name": "Päivitä"
+      }
+    },
+    "calendar": {
+      "deliveries": {
+        "name": "Toimitukset"
+      }
+    },
+    "sensor": {
+      "incoming_parcels": {
+        "name": "Saapuvat paketit",
+        "unit_of_measurement": "pakettia"
+      },
+      "next_delivery": {
+        "name": "Seuraava toimitus"
+      },
+      "delivered_parcels": {
+        "name": "Toimitetut paketit",
+        "unit_of_measurement": "pakettia"
+      },
+      "last_update": {
+        "name": "Viimeisin onnistunut päivitys"
+      },
+      "parcel": {
+        "name": "Paketti {barcode}"
+      }
+    }
+  }
+}
