@@ -55,7 +55,8 @@ duplicate them here.
 - **`dimensions` always `None`** — the payload reports a total *volume*, not an
   L×W×H triple, so it can't fill the canonical dimensions; kept `None` for parity.
   The ETA is a single instant (`planned_to` always `None`). History is free (same
-  `items[].events` list).
+  `items[].events` list). Reflected in `const.py`'s `CAPABILITIES` (feeds the
+  docs site's comparison table) — keep the two in agreement if that ever changes.
 
 ## Options and reloads — account-less model
 
