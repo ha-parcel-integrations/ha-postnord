@@ -22,7 +22,7 @@ you act in one of these areas:
 | consider "fixing" a lint/pattern the skill flags (poll interval, inline client) | *Deliberate skill divergences* |
 | commit, bump, tag, release, or write release notes; add a feature without a test | *Workflow / Commits / Versioning / Testing* |
 
-**API mechanics live in `carrier-research/api/postnord/` (private research repo)** — the keyless
+**API mechanics live in `carrier-research/postnord/api/` (private research repo)** — the keyless
 `X-Bap-Key` endpoint, the `TrackingInformationResponse` envelope, the empty-list
 / 401-403 signalling, the status vocabulary and the payload mapping. Do not
 duplicate them here.
@@ -97,5 +97,5 @@ python -m pytest tests/ --cov=custom_components.postnord
 
 Coverage must stay **above 95%** (silver `test-coverage` rule). Run before
 committing. A code change updates the README + this file in the same commit;
-the API reference now lives in the private `carrier-research/api/postnord/`,
+the API reference now lives in the private `carrier-research/postnord/api/`,
 not in this repo.
