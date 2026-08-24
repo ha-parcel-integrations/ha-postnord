@@ -95,12 +95,16 @@ _shape_fields_logged: set[str] = set()
 # tested by key (not truthiness) so a present-but-null field — a genuinely empty
 # value, e.g. no ETA yet — does not warn; only a *missing* key, the signal that
 # ``recipientview`` reshaped, does.
+#
+# ``estimatedTimeOfArrival`` is checked separately (see ``check_shipment_shape``):
+# real delivered shipments confirmed 2026-08-24 drop the key entirely rather than
+# nulling it, which the captured sample got wrong — an ETA is meaningless once
+# delivered, so a *delivered* shipment omitting it is the real shape, not a gap.
 _EXPECTED_FIELDS = (
     "consignor",
     "consignee",
     "statusText",
     "totalWeight",
-    "estimatedTimeOfArrival",
 )
 
 
@@ -130,6 +134,8 @@ def check_shipment_shape(raw: dict) -> None:
     for field in _EXPECTED_FIELDS:
         if field not in raw:
             _warn_missing_field(field)
+    if raw.get("status") != "DELIVERED" and "estimatedTimeOfArrival" not in raw:
+        _warn_missing_field("estimatedTimeOfArrival")
     items = raw.get("items")
     if not items or not any(
         isinstance(item, dict) and "events" in item for item in items

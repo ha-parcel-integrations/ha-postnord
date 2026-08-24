@@ -48,10 +48,14 @@ duplicate them here.
 - **Populated-shape self-report** (`check_shipment_shape`): the keyless
   `recipientview` *populated* shape has never been diffed against the captured
   `findByIdentifier` sample, so a real shipment missing a field we map
-  (`consignor`/`consignee`/`statusText`/`totalWeight`/`estimatedTimeOfArrival`/
-  `items[].events`) logs a one-shot WARNING with the issue link — **keys only, no
-  values** (consignor/consignee are PII). Presence is by key, so a present-but-null
-  field (a genuinely empty value) stays silent. Remove once the shape is confirmed.
+  (`consignor`/`consignee`/`statusText`/`totalWeight`/`items[].events`) logs a
+  one-shot WARNING with the issue link — **keys only, no values**
+  (consignor/consignee are PII). Presence is by key, so a present-but-null field
+  (a genuinely empty value) stays silent. Remove once the shape is confirmed.
+  `estimatedTimeOfArrival` is checked separately and only on a *non-delivered*
+  shipment: real delivered shipments confirmed 2026-08-24 drop the key entirely
+  (not null) once delivered, which is the correct shape — an ETA is meaningless
+  after delivery — so that case no longer warns.
 - **`dimensions` always `None`** — the payload reports a total *volume*, not an
   L×W×H triple, so it can't fill the canonical dimensions; kept `None` for parity.
   The ETA is a single instant (`planned_to` always `None`). History is free (same

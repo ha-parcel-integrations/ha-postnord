@@ -42,7 +42,9 @@ def delivered_sample(code: str = DELIVERED_CODE) -> dict:
             "header": "Delivered",
             "body": "The shipment has been delivered.",
         },
-        "estimatedTimeOfArrival": None,
+        # No estimatedTimeOfArrival key at all — confirmed 2026-08-24 against real
+        # delivered shipments (an ETA is meaningless once delivered, so PostNord
+        # drops the key rather than nulling it).
         "totalWeight": {"value": "1.25", "unit": "kg"},
         "items": [
             {

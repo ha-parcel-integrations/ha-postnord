@@ -277,9 +277,29 @@ def test_normalize_falls_back_to_status_code_without_text():
 def test_populated_shape_matches_sample_is_silent(caplog):
     """A well-formed shipment (present-but-null fields included) never warns."""
     _shape_fields_logged.clear()
-    # delivered_sample carries estimatedTimeOfArrival present-but-None.
+    # delivered_sample has no estimatedTimeOfArrival key at all — the confirmed
+    # real shape for a delivered shipment (see check_shipment_shape).
     normalize_parcel(delivered_sample())
     assert "response shape may differ" not in caplog.text
+
+
+def test_missing_eta_on_delivered_shipment_is_silent(caplog):
+    """A delivered shipment lacking estimatedTimeOfArrival is the real shape."""
+    _shape_fields_logged.clear()
+    raw = active_sample()
+    raw["status"] = "DELIVERED"
+    del raw["estimatedTimeOfArrival"]
+    normalize_parcel(raw)
+    assert "estimatedTimeOfArrival" not in caplog.text
+
+
+def test_missing_eta_on_active_shipment_still_warns(caplog):
+    """A non-delivered shipment lacking estimatedTimeOfArrival is still a gap."""
+    _shape_fields_logged.clear()
+    raw = active_sample()
+    del raw["estimatedTimeOfArrival"]
+    normalize_parcel(raw)
+    assert "'estimatedTimeOfArrival'" in caplog.text
 
 
 def test_pending_placeholder_does_not_warn_shape(caplog):
