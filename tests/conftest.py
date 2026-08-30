@@ -20,8 +20,7 @@ def reset_one_shot_warnings():
     makes them leak across tests, so whether a warning fires would otherwise
     depend on test order.
     """
-    from custom_components.postnord import api
-    from custom_components.postnord import parcels
+    from custom_components.postnord import api, parcels
 
     api._web_key_warned = False
     parcels._unmapped_statuses_logged.clear()
