@@ -146,6 +146,10 @@
         "name": "Inkommande paket",
         "unit_of_measurement": "paket"
       },
+      "awaiting_pickup": {
+        "name": "Väntar på upphämtning",
+        "unit_of_measurement": "paket"
+      },
       "next_delivery": {
         "name": "Nästa leverans"
       },

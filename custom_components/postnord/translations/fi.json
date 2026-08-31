@@ -146,6 +146,10 @@
         "name": "Saapuvat paketit",
         "unit_of_measurement": "pakettia"
       },
+      "awaiting_pickup": {
+        "name": "Noudettavissa",
+        "unit_of_measurement": "pakettia"
+      },
       "next_delivery": {
         "name": "Seuraava toimitus"
       },

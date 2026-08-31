@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from custom_components.postnord.const import ParcelStatus
 from custom_components.postnord.sensor import (
+    PostNordAwaitingPickupSensor,
     PostNordDeliveredParcelsSensor,
     PostNordIncomingParcelsSensor,
     PostNordLastUpdateSensor,
@@ -47,6 +48,23 @@ def test_incoming_counts_and_lists():
     sensor = PostNordIncomingParcelsSensor(coordinator, _entry(), lambda _: None, set())
     assert sensor.native_value == 2
     assert len(sensor.extra_state_attributes["parcels"]) == 2
+
+
+def test_awaiting_pickup_counts_only_ready_pickup_point_parcels():
+    coordinator = _coordinator([
+        _parcel("A", ParcelStatus.AT_PICKUP_POINT, pickup=True),
+        _parcel("B", ParcelStatus.IN_TRANSIT, pickup=True),
+        _parcel("C", ParcelStatus.AT_PICKUP_POINT, pickup=False),
+    ])
+    sensor = PostNordAwaitingPickupSensor(coordinator, _entry())
+    assert sensor.native_value == 1
+    assert sensor.extra_state_attributes["parcels"] == [coordinator.data[0]]
+
+
+def test_awaiting_pickup_is_empty_without_parcels():
+    sensor = PostNordAwaitingPickupSensor(_coordinator([]), _entry())
+    assert sensor.native_value == 0
+    assert sensor.extra_state_attributes == {"parcels": []}
 
 
 def test_parcel_sensor_status_and_attributes():
