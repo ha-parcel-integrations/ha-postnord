@@ -46,15 +46,6 @@
             "data_description": {
               "include_history": "Lisää pakettikohtainen historiaominaisuus, joka listaa jokaisen tilapäivityksen (aikaleima, tila, alkuperäinen teksti). Pois päältä oletuksena."
             }
-          },
-          "polling": {
-            "name": "Kysely",
-            "data": {
-              "refresh_interval": "Päivitä"
-            },
-            "data_description": {
-              "refresh_interval": "Kuinka usein integraatio tarkistaa PostNordilta pakettipäivitykset. Pidempi väli kuormittaa PostNordin rajapintaa vähemmän; oletusarvo 30 minuuttia riittää useimmille paketeille."
-            }
           }
         },
         "menu_options": {
@@ -73,8 +64,7 @@
         "data": {
           "delivered_filter_type": "Toimitetut paketit: suodata perusteella",
           "delivered_filter_amount": "Toimitetut paketit: määrä",
-          "include_history": "Sisällytä tilahistoria",
-          "refresh_interval": "Päivitä joka"
+          "include_history": "Sisällytä tilahistoria"
         }
       }
     },
@@ -84,15 +74,6 @@
     }
   },
   "selector": {
-    "refresh_interval": {
-      "options": {
-        "15": "15 minuuttia",
-        "30": "30 minuuttia",
-        "60": "60 minuuttia",
-        "120": "120 minuuttia",
-        "240": "240 minuuttia"
-      }
-    },
     "delivered_filter_type": {
       "options": {
         "days": "Päivää",

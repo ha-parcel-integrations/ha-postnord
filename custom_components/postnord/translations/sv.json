@@ -46,15 +46,6 @@
             "data_description": {
               "include_history": "Lägg till ett historikattribut per paket som listar varje statusuppdatering (tidsstämpel, status, originaltext). Avstängt som standard."
             }
-          },
-          "polling": {
-            "name": "Avfrågning",
-            "data": {
-              "refresh_interval": "Uppdatera var"
-            },
-            "data_description": {
-              "refresh_interval": "Hur ofta integrationen kontrollerar PostNord för paketuppdateringar. Ett längre intervall är skonsammare mot PostNords API; standardvärdet 30 minuter räcker gott för de flesta paket."
-            }
           }
         },
         "menu_options": {
@@ -73,8 +64,7 @@
         "data": {
           "delivered_filter_type": "Levererade paket: filtrera efter",
           "delivered_filter_amount": "Levererade paket: antal",
-          "include_history": "Inkludera statushistorik",
-          "refresh_interval": "Uppdatera var"
+          "include_history": "Inkludera statushistorik"
         }
       }
     },
@@ -84,15 +74,6 @@
     }
   },
   "selector": {
-    "refresh_interval": {
-      "options": {
-        "15": "15 minuter",
-        "30": "30 minuter",
-        "60": "60 minuter",
-        "120": "120 minuter",
-        "240": "240 minuter"
-      }
-    },
     "delivered_filter_type": {
       "options": {
         "days": "Dagar",
