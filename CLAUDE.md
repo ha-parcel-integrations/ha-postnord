@@ -27,6 +27,12 @@ you act in one of these areas:
 / 401-403 signalling, the status vocabulary and the payload mapping. Do not
 duplicate them here.
 
+**Structure, options flow, dynamic polling and module layout are suite-wide**
+and identical in every carrier — the authoritative spec is
+[`ha-carrier-template/scaffold/CLAUDE.md`](https://github.com/ha-parcel-integrations/ha-carrier-template/blob/main/scaffold/CLAUDE.md).
+Where this repo diverges from it, that is recorded below under
+*Divergences from the scaffold*.
+
 **Suite-wide tripwires, kept inline on purpose:**
 - **First refresh in `__init__.py`, before `async_forward_entry_setups`** — from
   a forwarded platform HA can't catch `ConfigEntryNotReady` and half-sets-up the
@@ -62,52 +68,12 @@ duplicate them here.
   `items[].events` list). Reflected in `const.py`'s `CAPABILITIES` (feeds the
   docs site's comparison table) — keep the two in agreement if that ever changes.
 
-## Options and reloads — account-less model
+## Divergences from the scaffold
 
-The options flow is one sectioned form; changes apply without a restart.
-Account-less carriers (this one) use the **update-listener** model
-(`async_request_refresh()` on option changes — no interval retuning needed,
-the coordinator recomputes its own cadence every refresh, see *Polling*
-below). Account-based carriers instead call `async_schedule_reload` with
-**no** listener (combining the two is deprecated, error in HA 2026.12+).
-This is also the resume path after dynamic polling has fully suspended —
-adding a parcel back triggers the same refresh, which re-arms scheduling.
+Everything not listed here follows the scaffold exactly.
 
-## Polling
-
-Polling is dynamic and status-driven, unconditionally — there is no
-user-facing interval option and never has been one since the
-2026-08-31 conversion (`carrier-research/dynamic-polling.md`). The
-coordinator recomputes its own cadence at the end of every refresh: a quiet
-window (00:00–06:00 local, with catch-up anchors at each end), a 15-minute
-hot tier when a tracked parcel is `out_for_delivery` (immediately, or from an
-hour before `planned_from`), a 45-minute mid tier otherwise, and a full stop
-(`update_interval = None`) when nothing is tracked or everything tracked is
-delivered. See `coordinator.py`'s `_hottest_tier_minutes` /
-`_next_update_interval` and `ha-carrier-template`'s
-`example_carrier/coordinator.py` for the canonical shape this mirrors.
-
-## Module layout
-
-| File | Carrier-specific? |
-|---|---|
-| `api.py` (HTTP client, `X-Bap-Key`, error types) | **yes** |
-| `const.py` (domain, URLs, `TRACKING_BAP_KEY`, `ParcelStatus`, option keys) | partly (URLs, key) |
-| `parcels.py` (status map, `normalize_parcel`, history, sort, filters — pure, no I/O) | partly (`_STATUS_MAP`, `normalize_parcel`) |
-| `coordinator.py` (fetch, cache, event firing) | mostly not |
-| `config_flow.py` | partly (code validation) |
-| `sensor.py` / `button.py` / `calendar.py` / `device_trigger.py` | no |
-| `diagnostics.py` | partly (`TO_REDACT`) |
-| `services.py` (`track_parcel` / `untrack_parcel`) | no |
-
-`parcels.py` is free of I/O and HA objects so the per-carrier part stays
-unit-testable. Config: `ConfigEntry.runtime_data` (typed, no `hass.data`),
-`PARALLEL_UPDATES = 0`, coordinator takes `config_entry=entry`.
-`aiohttp.ClientError` is caught **per parcel** in the gather loop (one bad parcel
-doesn't fail the poll) but **not** around the whole update (coordinator wraps
-that). Entities: `has_entity_name` + `translation_key`, `icons.json`, translated
-units, `_attr_attribution`, `_unrecorded_attributes` on anything with a parcel
-list or `raw`. Over-redact diagnostics.
+*Module layout* — `api.py` authenticates with an `X-Bap-Key` header
+(`TRACKING_BAP_KEY` in `const.py`), not the stock scheme.
 
 ## Running tests
 
