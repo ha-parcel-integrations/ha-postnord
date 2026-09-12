@@ -30,15 +30,6 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# A code as printed on the shipping confirmation or the missed-delivery card.
-# PostNord codes vary across SE/DK/NO/FI (long numeric item IDs and other
-# alphanumeric formats), so the pattern is deliberately generous (upper-case
-# alphanumeric, 6-30 chars) rather than narrow. It is also what the
-# ``track_parcel`` service and the e-mail-parsing example validate against, so a
-# valid code must never be rejected — a false negative is far more annoying than
-# a bad code that simply returns "not found" on the next poll.
-_TRACKING_CODE_RE = re.compile(r"^[A-Z0-9]{6,30}$")
-
 
 def normalize_tracking_code(value: str) -> str:
     """Return the tracking code upper-cased with separators stripped.
@@ -51,8 +42,13 @@ def normalize_tracking_code(value: str) -> str:
 
 
 def valid_tracking_code(value: str) -> bool:
-    """Whether ``value`` looks like a PostNord tracking code."""
-    return bool(_TRACKING_CODE_RE.match(value))
+    """Accept every non-empty code.
+
+    PostNord's tracking-code shapes vary too much across SE/DK/NO/FI and are
+    not fully confirmed, and an unrecognised code just comes back "not found"
+    from the API anyway.
+    """
+    return bool(value)
 
 
 def _current_parcels(entry: ConfigEntry) -> list[dict[str, str]]:
