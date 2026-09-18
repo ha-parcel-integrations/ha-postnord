@@ -261,6 +261,32 @@ def test_normalize_weight_falls_back_to_item_measurements():
     assert normalize_parcel(raw)["weight"] == 1.5
 
 
+def test_normalize_delivery_in_progress_event_is_out_for_delivery():
+    """Event 113 sits under EN_ROUTE but is PostNord's out-for-delivery signal."""
+    raw = active_sample()
+    raw["status"] = "EN_ROUTE"
+    raw["items"][0]["events"] = [
+        event("EN_ROUTE", "2026-04-29T06:00:00Z", "Arrived at the terminal", "z114"),
+        event("EN_ROUTE", "2026-04-29T08:00:00Z", "Delivery in progress", "113"),
+    ]
+    parcel = normalize_parcel(raw, include_history=True)
+    assert parcel["status"] == ParcelStatus.OUT_FOR_DELIVERY
+    assert [e["status"] for e in parcel["history"]] == [
+        ParcelStatus.IN_TRANSIT,
+        ParcelStatus.OUT_FOR_DELIVERY,
+    ]
+
+
+def test_normalize_en_route_stays_in_transit_after_a_later_event():
+    raw = active_sample()
+    raw["status"] = "EN_ROUTE"
+    raw["items"][0]["events"] = [
+        event("EN_ROUTE", "2026-04-29T08:00:00Z", "Delivery in progress", "113"),
+        event("EN_ROUTE", "2026-04-29T09:00:00Z", "Back at the terminal", "z114"),
+    ]
+    assert normalize_parcel(raw)["status"] == ParcelStatus.IN_TRANSIT
+
+
 def test_normalize_pickup_parcel():
     parcel = normalize_parcel(pickup_sample())
     assert parcel["status"] == ParcelStatus.AT_PICKUP_POINT

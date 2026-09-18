@@ -63,6 +63,11 @@ _STATUS_MAP: dict[str, ParcelStatus] = {
     "STOPPED": ParcelStatus.PROBLEM,
 }
 
+# PostNord reports "The delivery of the shipment item is in progress" as event
+# code 113 under the generic ``EN_ROUTE`` status; it is the real out-for-delivery
+# signal, which the machine ``status`` enum never surfaces for it.
+_OUT_FOR_DELIVERY_EVENT_CODE = "113"
+
 # Status codes we have already warned about, so each unmapped one is logged
 # only once per HA session instead of on every poll.
 _unmapped_statuses_logged: set[str] = set()
@@ -174,6 +179,13 @@ def map_event_status(code: str | None) -> ParcelStatus | None:
     return None
 
 
+def _event_status(event: dict) -> ParcelStatus | None:
+    """Map one event to a canonical status, honouring the out-for-delivery code."""
+    if str(event.get("eventCode")) == _OUT_FOR_DELIVERY_EVENT_CODE:
+        return ParcelStatus.OUT_FOR_DELIVERY
+    return map_event_status(event.get("status"))
+
+
 def parse_iso(value: str | None) -> datetime | None:
     """Parse an ISO 8601 string to an aware datetime, or ``None`` on failure.
 
@@ -255,7 +267,7 @@ def build_history(
             continue
         entry = {
             "timestamp": timestamp,
-            "status": map_event_status(event.get("status")),
+            "status": _event_status(event),
             "raw_status": event.get("eventDescription") or event.get("eventCode"),
         }
         parsed = parse_iso(timestamp)
@@ -302,10 +314,13 @@ def normalize_parcel(raw: dict, *, include_history: bool = False) -> dict:
     tracking_code = raw.get("shipmentId")
     status_code = raw.get("status")
     status = map_parcel_status(status_code)
-    delivered = status is ParcelStatus.DELIVERED
 
     # Events live under each item; flatten them into one shipment-level list.
     events = _flatten_events(raw)
+
+    if status is ParcelStatus.IN_TRANSIT and _latest_event_is_out_for_delivery(events):
+        status = ParcelStatus.OUT_FOR_DELIVERY
+    delivered = status is ParcelStatus.DELIVERED
 
     # ETA is a single instant (``estimatedTimeOfArrival``), so it is a point
     # estimate — ``planned_to`` stays None (only real windows fill it).
@@ -344,6 +359,19 @@ def _flatten_events(raw: dict) -> list[dict]:
         if isinstance(item, dict):
             events.extend(e for e in (item.get("events") or []) if isinstance(e, dict))
     return events
+
+
+def _latest_event_is_out_for_delivery(events: list[dict]) -> bool:
+    """Whether the newest event is PostNord's "delivery in progress" code."""
+    dated = [
+        (parsed, event)
+        for event in events
+        if (parsed := parse_iso(to_iso_timestamp(event.get("eventTime")))) is not None
+    ]
+    if not dated:
+        return False
+    newest = max(dated, key=lambda item: item[0])[1]
+    return str(newest.get("eventCode")) == _OUT_FOR_DELIVERY_EVENT_CODE
 
 
 def _delivered_at(events: list[dict]) -> str | None:
