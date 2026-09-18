@@ -331,9 +331,7 @@ def normalize_parcel(raw: dict, *, include_history: bool = False) -> dict:
         "pickup_point": (raw.get("deliveryPoint") or {}).get("name") or None,
         "url": tracking_url(tracking_code),
         "weight": _weight_kg(raw),
-        # PostNord's consumer payload reports a total volume, not L×W×H, so we
-        # cannot fill the canonical dimensions triple — kept None for parity.
-        "dimensions": None,
+        "dimensions": _dimensions_cm(raw),
         "history": build_history(events) if include_history else None,
         "raw": raw,
     }
@@ -359,20 +357,61 @@ def _delivered_at(events: list[dict]) -> str | None:
     return max(times) if times else None
 
 
+def _measurement(raw: dict, key: str) -> dict:
+    """Return the first item's ``statedMeasurement``/``assessedMeasurement``."""
+    for item in raw.get("items") or []:
+        if isinstance(item, dict) and isinstance(item.get(key), dict):
+            return item[key]
+    return {}
+
+
+def _quantity(quantity: Any, factors: dict[str, float]) -> float | None:
+    """Convert a ``{"value": "2.5", "unit": ...}`` quantity using ``factors``."""
+    if not isinstance(quantity, dict):
+        return None
+    factor = factors.get(str(quantity.get("unit")).lower())
+    try:
+        value = float(quantity.get("value"))
+    except (TypeError, ValueError):
+        return None
+    return value * factor if factor is not None else None
+
+
 def _weight_kg(raw: dict) -> float | None:
     """Return the shipment weight in kilograms, or ``None``.
 
     PostNord reports weight as ``{"value": "2.5", "unit": "kg"|"g"}`` under
-    ``totalWeight`` (falling back to ``assessedWeight``); grams are converted.
+    ``totalWeight``. Before the carrier has totalled it, the sender's declared
+    weight (``statedMeasurement``) and then PostNord's own measured weight
+    (``assessedMeasurement``) on the first item are used instead.
     """
-    weight = raw.get("totalWeight") or raw.get("assessedWeight") or {}
-    if not isinstance(weight, dict):
+    factors = {"kg": 1, "g": 0.001}
+    for weight in (
+        raw.get("totalWeight"),
+        raw.get("assessedWeight"),
+        _measurement(raw, "statedMeasurement").get("weight"),
+        _measurement(raw, "assessedMeasurement").get("weight"),
+    ):
+        value = _quantity(weight, factors)
+        if value is not None:
+            return value
+    return None
+
+
+def _dimensions_cm(raw: dict) -> dict[str, Any] | None:
+    """Return the canonical dimensions from the item's declared L×W×H, or ``None``.
+
+    PostNord reports each axis in metres under ``statedMeasurement``; the
+    contract is centimetres.
+    """
+    stated = _measurement(raw, "statedMeasurement")
+    axes = [
+        _quantity(stated.get(axis), {"m": 100, "cm": 1, "mm": 0.1})
+        for axis in ("length", "width", "height")
+    ]
+    if any(axis is None for axis in axes):
         return None
-    try:
-        value = float(weight.get("value"))
-    except (TypeError, ValueError):
-        return None
-    return value / 1000 if str(weight.get("unit")).lower() == "g" else value
+    return format_dimensions(*(round(axis, 1) for axis in axes))
 
 
 def sort_parcels_by_ts(

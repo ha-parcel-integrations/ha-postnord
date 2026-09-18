@@ -38,9 +38,10 @@ KNOWN_CAPABILITIES = frozenset(
 # Which optional contract fields this carrier's API actually populates — feeds
 # the comparison table on the docs site. Keep in lockstep with
 # normalize_parcel() in parcels.py: everything not listed here comes back as a
-# literal None there. PostNord's consumer payload reports a total volume, not
-# an L×W×H triple, so dimensions is the only field it can't fill.
-CAPABILITIES = frozenset({"weight", "delivery_window", "pickup_point", "url", "history"})
+# literal None there.
+CAPABILITIES = frozenset(
+    {"weight", "dimensions", "delivery_window", "pickup_point", "url", "history"}
+)
 
 # PostNord's public "Track & Trace" REST API (``recipientview``). It is
 # **keyless** for the caller: authentication is a fixed public web-client

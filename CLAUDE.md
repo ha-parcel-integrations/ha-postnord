@@ -62,10 +62,10 @@ Where this repo diverges from it, that is recorded below under
   shipment: real delivered shipments confirmed 2026-08-24 drop the key entirely
   (not null) once delivered, which is the correct shape — an ETA is meaningless
   after delivery — so that case no longer warns.
-- **`dimensions` always `None`** — the payload reports a total *volume*, not an
-  L×W×H triple, so it can't fill the canonical dimensions; kept `None` for parity.
-  The ETA is a single instant (`planned_to` always `None`). History is free (same
-  `items[].events` list). Reflected in `const.py`'s `CAPABILITIES` (feeds the
+- **`dimensions` come from `items[0].statedMeasurement`** (sender-declared L×W×H, in
+  metres → converted to cm); `None` when an axis is missing. Weight prefers
+  `totalWeight`, then stated, then assessed. The ETA is a single instant
+  (`planned_to` always `None`). History is free (same `items[].events` list). Reflected in `const.py`'s `CAPABILITIES` (feeds the
   docs site's comparison table) — keep the two in agreement if that ever changes.
 
 ## Divergences from the scaffold

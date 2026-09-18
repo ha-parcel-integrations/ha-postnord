@@ -205,8 +205,7 @@ def test_normalize_delivered_parcel():
         == "https://tracking.postnord.com/en/tracking?id=00000000000000002"
     )
     assert parcel["weight"] == 1.25
-    # PostNord's consumer payload has no L×W×H.
-    assert parcel["dimensions"] is None
+    assert parcel["dimensions"] is None  # sample carries no statedMeasurement
     assert parcel["history"] is None  # opt-in, default off
 
 
@@ -229,6 +228,37 @@ def test_normalize_weight_converts_grams():
     raw = active_sample()
     raw["totalWeight"] = {"value": "2500", "unit": "g"}
     assert normalize_parcel(raw)["weight"] == 2.5
+
+
+def test_normalize_dimensions_from_stated_measurement_in_metres():
+    raw = active_sample()
+    raw["items"][0]["statedMeasurement"] = {
+        "length": {"value": "0.390", "unit": "m"},
+        "height": {"value": "0.220", "unit": "m"},
+        "width": {"value": "0.290", "unit": "m"},
+    }
+    assert normalize_parcel(raw)["dimensions"] == {
+        "length": 39.0,
+        "width": 29.0,
+        "height": 22.0,
+        "text": "39 x 29 x 22 cm",
+    }
+
+
+def test_normalize_dimensions_none_when_an_axis_is_missing():
+    raw = active_sample()
+    raw["items"][0]["statedMeasurement"] = {"length": {"value": "0.390", "unit": "m"}}
+    assert normalize_parcel(raw)["dimensions"] is None
+
+
+def test_normalize_weight_falls_back_to_item_measurements():
+    """Announced parcels carry no totalWeight yet; stated beats assessed."""
+    raw = active_sample()
+    del raw["totalWeight"]
+    raw["items"][0]["assessedMeasurement"] = {"weight": {"value": "1.3", "unit": "kg"}}
+    assert normalize_parcel(raw)["weight"] == 1.3
+    raw["items"][0]["statedMeasurement"] = {"weight": {"value": "1.500", "unit": "kg"}}
+    assert normalize_parcel(raw)["weight"] == 1.5
 
 
 def test_normalize_pickup_parcel():
@@ -403,6 +433,5 @@ def test_capabilities_are_known_values():
     assert CAPABILITIES <= KNOWN_CAPABILITIES
 
 
-def test_capabilities_omit_only_dimensions():
-    """PostNord reports a total volume, not an L×W×H triple — see test_normalize_delivered_parcel."""
-    assert CAPABILITIES == {"weight", "delivery_window", "pickup_point", "url", "history"}
+def test_capabilities_cover_dimensions():
+    assert "dimensions" in CAPABILITIES
