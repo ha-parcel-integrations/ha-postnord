@@ -60,7 +60,7 @@ CAPABILITIES = frozenset({"weight", "delivery_window", "pickup_point", "url", "h
 TRACKING_API_URL = (
     "https://api2.postnord.com/rest/shipment/v5/trackandtrace/recipientview"
 )
-TRACKING_URL = "https://www.postnord.com/en/track-and-trace?shipmentId={tracking_code}"
+TRACKING_URL = "https://tracking.postnord.com/en/tracking?id={tracking_code}"
 
 # Query parameters for the tracking call. ``locale`` is fixed to English so the
 # raw human status text is stable for the status map; the canonical ``status``

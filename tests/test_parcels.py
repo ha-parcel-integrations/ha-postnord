@@ -202,7 +202,7 @@ def test_normalize_delivered_parcel():
     assert parcel["planned_to"] is None
     assert (
         parcel["url"]
-        == "https://www.postnord.com/en/track-and-trace?shipmentId=00000000000000002"
+        == "https://tracking.postnord.com/en/tracking?id=00000000000000002"
     )
     assert parcel["weight"] == 1.25
     # PostNord's consumer payload has no L×W×H.
