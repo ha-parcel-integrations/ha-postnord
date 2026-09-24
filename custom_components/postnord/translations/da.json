@@ -128,7 +128,7 @@
         "unit_of_measurement": "pakker"
       },
       "awaiting_pickup": {
-        "name": "Afventer afhentning",
+        "name": "Klar til afhentning",
         "unit_of_measurement": "pakker"
       },
       "next_delivery": {
