@@ -43,38 +43,6 @@
     "step": {
       "init": {
         "title": "PostNord-asetukset",
-        "sections": {
-          "parcels": {
-            "name": "Paketit",
-            "data": {
-              "add": "Lisää paketti",
-              "remove": "Poista paketteja"
-            },
-            "data_description": {
-              "add": "Anna PostNord-seurantakoodi aloittaaksesi sen seurannan. Löydät sen lähetysvahvistuksesta tai epäonnistuneen toimituksen kortista."
-            }
-          },
-          "delivered": {
-            "name": "Toimitetut paketit",
-            "data": {
-              "delivered_filter_type": "Suodata",
-              "delivered_filter_amount": "Määrä"
-            },
-            "data_description": {
-              "delivered_filter_type": "Näytä toimitetut paketit viimeisiltä X päivältä tai rajoita X viimeisimpään.",
-              "delivered_filter_amount": "Näytettävien päivien tai pakettien määrä."
-            }
-          },
-          "history": {
-            "name": "Pakettihistoria",
-            "data": {
-              "include_history": "Sisällytä tilahistoria"
-            },
-            "data_description": {
-              "include_history": "Lisää pakettikohtainen historiaominaisuus, joka listaa jokaisen tilapäivityksen (aikaleima, tila, alkuperäinen teksti). Pois päältä oletuksena."
-            }
-          }
-        },
         "menu_options": {
           "parcels": "Paketit",
           "settings": "Asetukset"
@@ -92,6 +60,11 @@
           "delivered_filter_type": "Toimitetut paketit: suodata perusteella",
           "delivered_filter_amount": "Toimitetut paketit: määrä",
           "include_history": "Sisällytä tilahistoria"
+        },
+        "data_description": {
+          "delivered_filter_type": "Näytä toimitetut paketit viimeisiltä X päivältä tai rajoita X viimeisimpään.",
+          "delivered_filter_amount": "Näytettävien päivien tai pakettien määrä.",
+          "include_history": "Lisää pakettikohtainen historiaominaisuus, joka listaa jokaisen tilapäivityksen (aikaleima, tila, alkuperäinen teksti). Pois päältä oletuksena."
         }
       }
     },

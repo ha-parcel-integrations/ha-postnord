@@ -43,38 +43,6 @@
     "step": {
       "init": {
         "title": "PostNord options",
-        "sections": {
-          "parcels": {
-            "name": "Parcels",
-            "data": {
-              "add": "Add a parcel",
-              "remove": "Remove parcels"
-            },
-            "data_description": {
-              "add": "Enter a PostNord tracking code to start tracking it. You find it on the shipping confirmation or the missed-delivery card."
-            }
-          },
-          "delivered": {
-            "name": "Delivered parcels",
-            "data": {
-              "delivered_filter_type": "Filter by",
-              "delivered_filter_amount": "Amount"
-            },
-            "data_description": {
-              "delivered_filter_type": "Show delivered parcels from the last X days, or limit to the X most recent.",
-              "delivered_filter_amount": "Number of days or parcels to show."
-            }
-          },
-          "history": {
-            "name": "Parcel history",
-            "data": {
-              "include_history": "Include status history"
-            },
-            "data_description": {
-              "include_history": "Add a per-parcel history attribute listing each status update (timestamp, status, original text). Off by default."
-            }
-          }
-        },
         "menu_options": {
           "parcels": "Parcels",
           "settings": "Settings"
@@ -92,6 +60,11 @@
           "delivered_filter_type": "Filter by",
           "delivered_filter_amount": "Delivered parcels: amount",
           "include_history": "Include status history"
+        },
+        "data_description": {
+          "delivered_filter_type": "Show delivered parcels from the last X days, or limit to the X most recent.",
+          "delivered_filter_amount": "Number of days or parcels to show.",
+          "include_history": "Add a per-parcel history attribute listing each status update (timestamp, status, original text). Off by default."
         }
       }
     },

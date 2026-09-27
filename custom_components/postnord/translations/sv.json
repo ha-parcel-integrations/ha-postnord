@@ -43,38 +43,6 @@
     "step": {
       "init": {
         "title": "PostNord-alternativ",
-        "sections": {
-          "parcels": {
-            "name": "Paket",
-            "data": {
-              "add": "Lägg till ett paket",
-              "remove": "Ta bort paket"
-            },
-            "data_description": {
-              "add": "Ange en PostNord-spårningskod för att börja spåra den. Du hittar den på leveransbekräftelsen eller kortet för missat leveransförsök."
-            }
-          },
-          "delivered": {
-            "name": "Levererade paket",
-            "data": {
-              "delivered_filter_type": "Filtrera efter",
-              "delivered_filter_amount": "Antal"
-            },
-            "data_description": {
-              "delivered_filter_type": "Visa levererade paket från de senaste X dagarna, eller begränsa till de X senaste.",
-              "delivered_filter_amount": "Antal dagar eller paket att visa."
-            }
-          },
-          "history": {
-            "name": "Pakethistorik",
-            "data": {
-              "include_history": "Inkludera statushistorik"
-            },
-            "data_description": {
-              "include_history": "Lägg till ett historikattribut per paket som listar varje statusuppdatering (tidsstämpel, status, originaltext). Avstängt som standard."
-            }
-          }
-        },
         "menu_options": {
           "parcels": "Paket",
           "settings": "Inställningar"
@@ -92,6 +60,11 @@
           "delivered_filter_type": "Levererade paket: filtrera efter",
           "delivered_filter_amount": "Levererade paket: antal",
           "include_history": "Inkludera statushistorik"
+        },
+        "data_description": {
+          "delivered_filter_type": "Visa levererade paket från de senaste X dagarna, eller begränsa till de X senaste.",
+          "delivered_filter_amount": "Antal dagar eller paket att visa.",
+          "include_history": "Lägg till ett historikattribut per paket som listar varje statusuppdatering (tidsstämpel, status, originaltext). Avstängt som standard."
         }
       }
     },

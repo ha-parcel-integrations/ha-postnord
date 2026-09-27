@@ -43,38 +43,6 @@
     "step": {
       "init": {
         "title": "PostNord-indstillinger",
-        "sections": {
-          "parcels": {
-            "name": "Pakker",
-            "data": {
-              "add": "Tilføj en pakke",
-              "remove": "Fjern pakker"
-            },
-            "data_description": {
-              "add": "Indtast en PostNord-sporingskode for at begynde at spore den. Du finder den på forsendelsesbekræftelsen eller kortet for mislykket levering."
-            }
-          },
-          "delivered": {
-            "name": "Leverede pakker",
-            "data": {
-              "delivered_filter_type": "Filtrer efter",
-              "delivered_filter_amount": "Antal"
-            },
-            "data_description": {
-              "delivered_filter_type": "Vis leverede pakker fra de seneste X dage, eller begræns til de X seneste.",
-              "delivered_filter_amount": "Antal dage eller pakker der skal vises."
-            }
-          },
-          "history": {
-            "name": "Pakkehistorik",
-            "data": {
-              "include_history": "Inkluder statushistorik"
-            },
-            "data_description": {
-              "include_history": "Tilføj en historikattribut pr. pakke, der viser hver statusopdatering (tidsstempel, status, originaltekst). Slået fra som standard."
-            }
-          }
-        },
         "menu_options": {
           "parcels": "Pakker",
           "settings": "Indstillinger"
@@ -92,6 +60,11 @@
           "delivered_filter_type": "Leverede pakker: filtrer efter",
           "delivered_filter_amount": "Leverede pakker: antal",
           "include_history": "Medtag statushistorik"
+        },
+        "data_description": {
+          "delivered_filter_type": "Vis leverede pakker fra de seneste X dage, eller begræns til de X seneste.",
+          "delivered_filter_amount": "Antal dage eller pakker der skal vises.",
+          "include_history": "Tilføj en historikattribut pr. pakke, der viser hver statusopdatering (tidsstempel, status, originaltekst). Slået fra som standard."
         }
       }
     },

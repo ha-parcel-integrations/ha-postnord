@@ -43,38 +43,6 @@
     "step": {
       "init": {
         "title": "PostNord-opties",
-        "sections": {
-          "parcels": {
-            "name": "Pakketten",
-            "data": {
-              "add": "Pakket toevoegen",
-              "remove": "Pakketten verwijderen"
-            },
-            "data_description": {
-              "add": "Voer een PostNord-trackingcode in om het pakket te volgen. Je vindt de code op de verzendbevestiging of het niet-thuiskaartje."
-            }
-          },
-          "delivered": {
-            "name": "Bezorgde pakketten",
-            "data": {
-              "delivered_filter_type": "Filteren op",
-              "delivered_filter_amount": "Aantal"
-            },
-            "data_description": {
-              "delivered_filter_type": "Toon bezorgde pakketten van de laatste X dagen, of beperk tot de X meest recente.",
-              "delivered_filter_amount": "Aantal dagen of pakketten om te tonen."
-            }
-          },
-          "history": {
-            "name": "Pakketgeschiedenis",
-            "data": {
-              "include_history": "Statusgeschiedenis toevoegen"
-            },
-            "data_description": {
-              "include_history": "Voegt per pakket een history-attribuut toe met elke statusupdate (tijdstip, status, originele tekst). Standaard uit."
-            }
-          }
-        },
         "menu_options": {
           "parcels": "Pakketten",
           "settings": "Instellingen"
@@ -92,6 +60,11 @@
           "delivered_filter_type": "Filteren op",
           "delivered_filter_amount": "Bezorgde pakketten: aantal",
           "include_history": "Statusgeschiedenis toevoegen"
+        },
+        "data_description": {
+          "delivered_filter_type": "Toon bezorgde pakketten van de laatste X dagen, of beperk tot de X meest recente.",
+          "delivered_filter_amount": "Aantal dagen of pakketten om te tonen.",
+          "include_history": "Voegt per pakket een history-attribuut toe met elke statusupdate (tijdstip, status, originele tekst). Standaard uit."
         }
       }
     },
