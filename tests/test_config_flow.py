@@ -10,8 +10,11 @@ from custom_components.postnord.const import (
     CONF_DELIVERED_FILTER_TYPE,
     CONF_INCLUDE_HISTORY,
     CONF_PARCELS,
+    CONF_SOURCE,
     CONF_TRACKING_CODE,
     DOMAIN,
+    SOURCE_ACCOUNT,
+    SOURCE_TRACKING,
 )
 
 
@@ -28,37 +31,55 @@ def test_valid_tracking_code_accepts_any_non_empty_code():
     assert not valid_tracking_code("")
 
 
-async def test_user_flow_shows_confirm_form(hass):
-    """Setup shows a keyless confirm form (no credential asked)."""
+async def test_user_flow_offers_both_sources(hass):
+    """Setup opens on a menu choosing the account inbox or tracking codes."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": "user"}
     )
-    assert result["type"] == "form"
+    assert result["type"] == "menu"
     assert result["step_id"] == "user"
+    assert result["menu_options"] == [SOURCE_ACCOUNT, SOURCE_TRACKING]
 
 
-async def test_user_flow_creates_keyless_hub(hass):
-    """Confirming creates the hub with no stored credential."""
+async def _tracking_step(hass):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": "user"}
     )
+    return await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": SOURCE_TRACKING}
+    )
+
+
+async def test_tracking_flow_creates_keyless_hub(hass):
+    """Confirming creates the hub with no stored credential."""
+    result = await _tracking_step(hass)
+    assert result["type"] == "form"
+    assert result["step_id"] == SOURCE_TRACKING
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {}
     )
     assert result["type"] == "create_entry"
     assert result["title"] == "PostNord"
-    assert result["data"] == {}
+    assert result["data"] == {CONF_SOURCE: SOURCE_TRACKING}
     assert result["options"][CONF_PARCELS] == []
 
 
-async def test_second_hub_rejected(hass):
+async def test_second_tracking_hub_rejected(hass):
+    """The fixed unique id keeps it to one tracking hub."""
     MockConfigEntry(domain=DOMAIN, unique_id=DOMAIN).add_to_hass(hass)
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": "user"}
-    )
+    result = await _tracking_step(hass)
     assert result["type"] == "abort"
-    # single_config_entry in the manifest aborts before the flow runs.
-    assert result["reason"] == "single_instance_allowed"
+    assert result["reason"] == "already_configured"
+
+
+async def test_tracking_hub_allowed_beside_an_account(hass):
+    MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="account:someone@example.com",
+        data={CONF_SOURCE: SOURCE_ACCOUNT},
+    ).add_to_hass(hass)
+    result = await _tracking_step(hass)
+    assert result["type"] == "form"
 
 
 def _hub(parcels: list[dict]) -> MockConfigEntry:
@@ -120,3 +141,14 @@ async def test_options_settings_preserve_parcel_list(hass):
     )
     assert result["type"] == "create_entry"
     assert result["data"][CONF_PARCELS] == parcels
+
+
+async def test_options_account_entry_offers_settings_only(hass):
+    """An account imports its parcels, so there is no parcel list to manage."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_SOURCE: SOURCE_ACCOUNT}, options={}
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == "menu"
+    assert result["menu_options"] == ["settings"]

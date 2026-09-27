@@ -15,8 +15,8 @@ from . import PostNordConfigEntry
 # Field names redacted from diagnostics. PostNord's raw payload carries the
 # sender under ``consignor`` and the recipient under ``consignee`` (each a
 # ``{name, address:{city, postCode, countryCode}}`` block), plus the canonical
-# fields we publish. There is no user credential to redact — the integration is
-# keyless (a fixed built-in web key, not stored on the entry).
+# fields we publish. The tracking hub is keyless; an account entry stores its
+# token pair and email in ``entry.data``, which is redacted wholesale below.
 TO_REDACT = {
     # canonical fields we publish ourselves
     "tracking_code",
@@ -37,6 +37,23 @@ TO_REDACT = {
     "email",
     "name",
     "signature",
+    # account credentials and login material
+    "access_token",
+    "refresh_token",
+    "redirect_url",
+    "code",
+    "state",
+    "code_verifier",
+    "Authorization",
+    # account payload blocks that identify a person, a place or a parcel
+    "shipmentId",
+    "itemId",
+    "userData",
+    "destinationDeliveryPoint",
+    "deliveryPoint",
+    "eventDescription",
+    "location",
+    "collectCode",
 }
 
 
@@ -47,6 +64,7 @@ async def async_get_config_entry_diagnostics(
     coordinator = entry.runtime_data.coordinator
 
     return {
+        "entry_data": async_redact_data(dict(entry.data), TO_REDACT),
         "entry_options": async_redact_data(dict(entry.options), TO_REDACT),
         "polling": {
             "current_tier_minutes": coordinator.current_tier_minutes,

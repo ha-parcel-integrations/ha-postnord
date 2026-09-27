@@ -21,10 +21,14 @@ def reset_one_shot_warnings():
     depend on test order.
     """
     from custom_components.postnord import status
+    from custom_components.postnord.account import coordinator as account_coordinator
+    from custom_components.postnord.account import parcels as account_parcels
     from custom_components.postnord.tracking import api, parcels
 
     api._web_key_warned = False
     status._unmapped_statuses_logged.clear()
+    account_parcels._warned_fields.clear()
+    account_coordinator._compatibility_warned = False
     parcels._shape_fields_logged.clear()
     yield
 

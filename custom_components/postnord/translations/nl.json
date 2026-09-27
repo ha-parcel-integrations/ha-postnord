@@ -4,12 +4,39 @@
     "step": {
       "user": {
         "title": "PostNord instellen",
+        "description": "Hoe wil je je PostNord-pakketten volgen?",
+        "menu_options": {
+          "account": "Account (automatisch importeren)",
+          "tracking": "Trackingcodes"
+        }
+      },
+      "tracking": {
+        "title": "PostNord-trackingcodes instellen",
         "description": "Voeg PostNord-pakkettracking toe. Er is geen account of API-sleutel nodig. Voeg na het instellen pakketten toe via de integratie-opties of de `postnord.track_parcel`-service."
+      },
+      "account": {
+        "title": "Inloggen op je PostNord-account",
+        "description": "Open deze link in een browser en log in met je PostNord-account: {authorize_url}\n\nPostNord rondt de login af door je browser naar een `com.postnord.app://redirect…`-adres te sturen dat de browser niet kan openen — dat is de bedoeling. Open de ontwikkelaarstools van je browser op het tabblad Netwerk en zet **Logboek behouden** aan vóór je inlogt. Kopieer daarna dat adres uit de lijst met verzoeken of uit de **Location**-header van het laatste `account.postnord.com`-verzoek — zie de [stapsgewijze uitleg]({docs_url}). Plak het hieronder binnen een paar minuten: de code erin werkt maar één keer.",
+        "data": {
+          "redirect_url": "Redirect-URL"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Opnieuw inloggen bij PostNord",
+        "description": "PostNord accepteert de opgeslagen login voor {email} niet meer. Open deze link, log in met dat account en plak de redirect-URL die je in de ontwikkelaarstools van je browser vindt (zie de [stapsgewijze uitleg]({docs_url})): {authorize_url}",
+        "data": {
+          "redirect_url": "Redirect-URL"
+        }
       }
     },
+    "error": {
+      "invalid_redirect": "Dat is niet de redirect-URL van deze login, of de code is verlopen. Kopieer het volledige adres `com.postnord.app://redirect?code=…` en plak het binnen een paar minuten; lukt het nog steeds niet, log dan opnieuw in met dezelfde link.",
+      "cannot_connect": "Kan de loginservice van PostNord niet bereiken."
+    },
     "abort": {
-      "already_configured": "PostNord is al ingesteld.",
-      "single_instance_allowed": "PostNord is al ingesteld."
+      "already_configured": "Dit PostNord-account of deze tracking-hub is al ingesteld.",
+      "reauth_successful": "PostNord is opnieuw geauthenticeerd.",
+      "unique_id_mismatch": "Die login hoort bij een ander PostNord-account. Log in met het account waarmee deze integratie is ingesteld."
     }
   },
   "options": {

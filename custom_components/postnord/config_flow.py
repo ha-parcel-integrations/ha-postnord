@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
@@ -15,18 +16,41 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers import selector
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .account.client import (
+    PostNordAccountApiError,
+    PostNordAccountClient,
+    PostNordAccountInvalidRedirect,
+    PostNordLogin,
+)
 from .const import (
+    ACCOUNT_REDIRECT_DOCS_URL,
+    CONF_ACCESS_TOKEN,
     CONF_DELIVERED_FILTER_AMOUNT,
     CONF_DELIVERED_FILTER_TYPE,
+    CONF_EMAIL,
     CONF_INCLUDE_HISTORY,
     CONF_PARCELS,
+    CONF_REDIRECT_URL,
+    CONF_REFRESH_TOKEN,
+    CONF_SOURCE,
     CONF_TRACKING_CODE,
     DEFAULT_DELIVERED_FILTER_AMOUNT,
     DEFAULT_DELIVERED_FILTER_TYPE,
     DEFAULT_INCLUDE_HISTORY,
     DOMAIN,
+    SOURCE_ACCOUNT,
+    SOURCE_TRACKING,
 )
+
+_REDIRECT_SCHEMA = vol.Schema({vol.Required(CONF_REDIRECT_URL): str})
+
+_DEFAULT_OPTIONS = {
+    CONF_DELIVERED_FILTER_TYPE: DEFAULT_DELIVERED_FILTER_TYPE,
+    CONF_DELIVERED_FILTER_AMOUNT: DEFAULT_DELIVERED_FILTER_AMOUNT,
+    CONF_INCLUDE_HISTORY: DEFAULT_INCLUDE_HISTORY,
+}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,16 +93,28 @@ class PostNordConfigFlow(ConfigFlow, domain=DOMAIN):
         """Return the options flow handler."""
         return PostNordOptionsFlowHandler()
 
+    def __init__(self) -> None:
+        """Initialise per-flow login state — never persisted, never reused."""
+        self._login: PostNordLogin | None = None
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Create the keyless PostNord hub — one instance, no credential.
+        """Choose between tracking codes and an account inbox."""
+        return self.async_show_menu(
+            step_id="user", menu_options=[SOURCE_ACCOUNT, SOURCE_TRACKING]
+        )
+
+    async def async_step_tracking(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Create the keyless PostNord tracking hub — one instance, no credential.
 
         PostNord tracking is per tracking-code and needs no account or key (the
         public endpoint authenticates with a fixed built-in web key), so setup
         just confirms. Parcels are added afterwards via the options flow, the
-        ``postnord.track_parcel`` service or a dashboard button.
-        ``single_config_entry`` in the manifest enforces one hub.
+        ``postnord.track_parcel`` service or a dashboard button. The fixed
+        unique id keeps it to one hub now that account entries sit beside it.
         """
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
@@ -86,16 +122,102 @@ class PostNordConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             return self.async_create_entry(
                 title="PostNord",
-                data={},
-                options={
-                    CONF_PARCELS: [],
-                    CONF_DELIVERED_FILTER_TYPE: DEFAULT_DELIVERED_FILTER_TYPE,
-                    CONF_DELIVERED_FILTER_AMOUNT: DEFAULT_DELIVERED_FILTER_AMOUNT,
-                    CONF_INCLUDE_HISTORY: DEFAULT_INCLUDE_HISTORY,
-                },
+                data={CONF_SOURCE: SOURCE_TRACKING},
+                options={CONF_PARCELS: [], **_DEFAULT_OPTIONS},
             )
 
-        return self.async_show_form(step_id="user")
+        return self.async_show_form(step_id=SOURCE_TRACKING)
+
+    async def async_step_account(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Show the login link and take the pasted redirect URL back."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            result = await self._async_login(user_input[CONF_REDIRECT_URL])
+            if isinstance(result, str):
+                errors["base"] = result
+            else:
+                email, tokens = result
+                await self.async_set_unique_id(f"account:{email.lower()}")
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(
+                    title=email,
+                    data={CONF_SOURCE: SOURCE_ACCOUNT, CONF_EMAIL: email, **tokens},
+                    options=dict(_DEFAULT_OPTIONS),
+                )
+
+        return self.async_show_form(
+            step_id=SOURCE_ACCOUNT,
+            data_schema=_REDIRECT_SCHEMA,
+            errors=errors,
+            description_placeholders=self._placeholders(),
+        )
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Start reauthentication after PostNord refused the stored tokens."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Repeat the browser login and update the entry's tokens."""
+        entry = self._get_reauth_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            result = await self._async_login(user_input[CONF_REDIRECT_URL])
+            if isinstance(result, str):
+                errors["base"] = result
+            else:
+                email, tokens = result
+                await self.async_set_unique_id(f"account:{email.lower()}")
+                self._abort_if_unique_id_mismatch()
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={CONF_EMAIL: email, **tokens}
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=_REDIRECT_SCHEMA,
+            errors=errors,
+            description_placeholders={
+                **self._placeholders(),
+                CONF_EMAIL: entry.data.get(CONF_EMAIL, ""),
+            },
+        )
+
+    def _placeholders(self) -> dict[str, str]:
+        # One login per flow: a retry after a bad paste must keep the URL the
+        # user already has open.
+        if self._login is None:
+            self._login = PostNordLogin()
+        return {
+            "authorize_url": self._login.authorize_url,
+            "docs_url": ACCOUNT_REDIRECT_DOCS_URL,
+        }
+
+    async def _async_login(
+        self, pasted: str
+    ) -> tuple[str, dict[str, str]] | str:
+        """Exchange the pasted redirect; return (email, tokens) or an error key."""
+        if self._login is None:
+            self._login = PostNordLogin()
+        session = async_get_clientsession(self.hass)
+        try:
+            tokens = await self._login.async_exchange(session, pasted)
+            email = await PostNordAccountClient(
+                session,
+                access_token=tokens[CONF_ACCESS_TOKEN],
+                refresh_token=tokens[CONF_REFRESH_TOKEN],
+            ).async_get_email()
+        except PostNordAccountInvalidRedirect:
+            return "invalid_redirect"
+        except PostNordAccountApiError:
+            _LOGGER.debug("PostNord account login failed", exc_info=True)
+            return "cannot_connect"
+        return email, tokens
 
 
 class PostNordOptionsFlowHandler(OptionsFlow):
@@ -110,10 +232,15 @@ class PostNordOptionsFlowHandler(OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Offer parcel management separately from integration settings."""
-        return self.async_show_menu(
-            step_id="init", menu_options=["parcels", "settings"]
-        )
+        """Offer parcel management separately from integration settings.
+
+        An account entry imports its parcels by itself, so it has no parcel
+        list to manage.
+        """
+        menu_options = ["settings"]
+        if self.config_entry.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_TRACKING:
+            menu_options.insert(0, "parcels")
+        return self.async_show_menu(step_id="init", menu_options=menu_options)
 
     async def async_step_parcels(
         self, user_input: dict[str, Any] | None = None

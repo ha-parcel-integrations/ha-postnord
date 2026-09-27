@@ -4,12 +4,39 @@
     "step": {
       "user": {
         "title": "Määritä PostNord",
+        "description": "Miten haluat seurata PostNord-pakettejasi?",
+        "menu_options": {
+          "account": "Tili (automaattinen tuonti)",
+          "tracking": "Seurantakoodit"
+        }
+      },
+      "tracking": {
+        "title": "Määritä PostNord-seurantakoodit",
         "description": "Lisää PostNord-pakettien seuranta. Tiliä tai API-avainta ei tarvita. Määrityksen jälkeen voit lisätä paketteja integraation asetuksista tai `postnord.track_parcel`-palvelun kautta."
+      },
+      "account": {
+        "title": "Kirjaudu PostNord-tilillesi",
+        "description": "Avaa tämä linkki selaimessa ja kirjaudu PostNord-tilillesi: {authorize_url}\n\nPostNord päättää kirjautumisen ohjaamalla selaimen osoitteeseen `com.postnord.app://redirect…`, jota selain ei voi avata — se on odotettua. Avaa selaimen kehittäjätyökalujen Verkko-välilehti ja ota **Säilytä loki** käyttöön ennen kirjautumista. Kopioi sitten osoite pyyntöluettelosta tai viimeisen `account.postnord.com`-pyynnön **Location**-otsakkeesta — katso [vaiheittaiset ohjeet]({docs_url}). Liitä se alle muutaman minuutin sisällä: sen koodi toimii vain kerran.",
+        "data": {
+          "redirect_url": "Uudelleenohjauksen URL"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Kirjaudu PostNordiin uudelleen",
+        "description": "PostNord ei enää hyväksy tilin {email} tallennettua kirjautumista. Avaa tämä linkki, kirjaudu kyseisellä tilillä ja liitä selaimen kehittäjätyökaluista löytämäsi uudelleenohjauksen URL (katso [vaiheittaiset ohjeet]({docs_url})): {authorize_url}",
+        "data": {
+          "redirect_url": "Uudelleenohjauksen URL"
+        }
       }
     },
+    "error": {
+      "invalid_redirect": "Tämä ei ole tämän kirjautumisen uudelleenohjauksen URL, tai sen koodi on vanhentunut. Kopioi koko osoite `com.postnord.app://redirect?code=…` ja liitä se muutaman minuutin sisällä; jos se epäonnistuu edelleen, kirjaudu uudelleen samalla linkillä.",
+      "cannot_connect": "PostNordin kirjautumispalveluun ei saada yhteyttä."
+    },
     "abort": {
-      "already_configured": "PostNord on jo määritetty.",
-      "single_instance_allowed": "PostNord on jo määritetty."
+      "already_configured": "Tämä PostNord-tili tai seurantakeskus on jo määritetty.",
+      "reauth_successful": "PostNord todennettiin uudelleen onnistuneesti.",
+      "unique_id_mismatch": "Kirjautuminen kuuluu eri PostNord-tilille. Kirjaudu tilillä, jolla tämä merkintä määritettiin."
     }
   },
   "options": {

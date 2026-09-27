@@ -4,12 +4,39 @@
     "step": {
       "user": {
         "title": "Set up PostNord",
+        "description": "How do you want to follow your PostNord parcels?",
+        "menu_options": {
+          "account": "Account (automatic import)",
+          "tracking": "Tracking codes"
+        }
+      },
+      "tracking": {
+        "title": "Set up PostNord tracking codes",
         "description": "Add PostNord parcel tracking. No account or API key is needed. After setup, add parcels via the integration options or the `postnord.track_parcel` service."
+      },
+      "account": {
+        "title": "Log in to your PostNord account",
+        "description": "Open this link in a browser and log in with your PostNord account: {authorize_url}\n\nPostNord finishes the login by sending your browser to a `com.postnord.app://redirect…` address, which the browser cannot open — that is expected. Open your browser's developer tools on the Network tab and turn on **Preserve log** before you log in, then copy that address from the request list or from the **Location** header of the last `account.postnord.com` request — see [step-by-step instructions]({docs_url}). Paste it below within a few minutes: the code in it works only once.",
+        "data": {
+          "redirect_url": "Redirect URL"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Log in to PostNord again",
+        "description": "PostNord no longer accepts the stored login for {email}. Open this link, log in with that account and paste the redirect URL you catch in your browser's developer tools (see [step-by-step instructions]({docs_url})): {authorize_url}",
+        "data": {
+          "redirect_url": "Redirect URL"
+        }
       }
     },
+    "error": {
+      "invalid_redirect": "That is not the redirect URL of this login, or its code has expired. Copy the full `com.postnord.app://redirect?code=…` address and paste it within a few minutes; if it keeps failing, log in again with the same link.",
+      "cannot_connect": "Unable to reach PostNord's login service."
+    },
     "abort": {
-      "already_configured": "PostNord is already set up.",
-      "single_instance_allowed": "PostNord is already set up."
+      "already_configured": "This PostNord account or tracking hub is already set up.",
+      "reauth_successful": "PostNord was reauthenticated successfully.",
+      "unique_id_mismatch": "That login is for a different PostNord account. Log in with the account this entry was set up for."
     }
   },
   "options": {

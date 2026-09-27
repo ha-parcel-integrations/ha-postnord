@@ -4,12 +4,39 @@
     "step": {
       "user": {
         "title": "Konfigurer PostNord",
+        "description": "Hvordan vil du følge dine PostNord-pakker?",
+        "menu_options": {
+          "account": "Konto (automatisk import)",
+          "tracking": "Sporingsnumre"
+        }
+      },
+      "tracking": {
+        "title": "Konfigurer PostNord-sporingsnumre",
         "description": "Tilføj PostNord-pakkesporing. Ingen konto eller API-nøgle er nødvendig. Efter opsætningen kan du tilføje pakker via integrationens indstillinger eller tjenesten `postnord.track_parcel`."
+      },
+      "account": {
+        "title": "Log ind på din PostNord-konto",
+        "description": "Åbn dette link i en browser, og log ind med din PostNord-konto: {authorize_url}\n\nPostNord afslutter login ved at sende din browser til en `com.postnord.app://redirect…`-adresse, som browseren ikke kan åbne — det er forventet. Åbn browserens udviklerværktøjer på fanen Netværk, og slå **Bevar log** til, før du logger ind. Kopiér derefter adressen fra anmodningslisten eller fra **Location**-headeren i den sidste `account.postnord.com`-anmodning — se [trin-for-trin-vejledningen]({docs_url}). Indsæt den nedenfor inden for få minutter: koden i den virker kun én gang.",
+        "data": {
+          "redirect_url": "Omdirigerings-URL"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Log ind på PostNord igen",
+        "description": "PostNord accepterer ikke længere det gemte login for {email}. Åbn dette link, log ind med den konto, og indsæt omdirigerings-URL'en fra browserens udviklerværktøjer (se [trin-for-trin-vejledningen]({docs_url})): {authorize_url}",
+        "data": {
+          "redirect_url": "Omdirigerings-URL"
+        }
       }
     },
+    "error": {
+      "invalid_redirect": "Det er ikke omdirigerings-URL'en fra dette login, eller koden er udløbet. Kopiér hele adressen `com.postnord.app://redirect?code=…`, og indsæt den inden for få minutter; log ind igen med det samme link, hvis det fortsat mislykkes.",
+      "cannot_connect": "Kan ikke få forbindelse til PostNords login-tjeneste."
+    },
     "abort": {
-      "already_configured": "PostNord er allerede konfigureret.",
-      "single_instance_allowed": "PostNord er allerede konfigureret."
+      "already_configured": "Denne PostNord-konto eller sporingshub er allerede konfigureret.",
+      "reauth_successful": "PostNord blev godkendt igen.",
+      "unique_id_mismatch": "Det login hører til en anden PostNord-konto. Log ind med den konto, som denne post blev oprettet med."
     }
   },
   "options": {

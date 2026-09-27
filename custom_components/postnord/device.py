@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 
-from .const import DOMAIN
+from .const import CONF_EMAIL, CONF_SOURCE, DOMAIN, SOURCE_ACCOUNT, SOURCE_TRACKING
 
 CONFIGURATION_URL = "https://www.postnord.com/en/track-and-trace"
 
@@ -18,10 +18,16 @@ ATTRIBUTION = "Data provided by PostNord"
 
 
 def build_device_info(entry: ConfigEntry) -> DeviceInfo:
-    """Return the DeviceInfo shared by every entity of this hub."""
+    """Return the DeviceInfo shared by every entity of this hub.
+
+    An account device carries the account's email so two accounts stay
+    distinguishable; the tracking hub keeps its plain name.
+    """
+    is_account = entry.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_ACCOUNT
+    email = entry.data.get(CONF_EMAIL)
     return DeviceInfo(
         identifiers={(DOMAIN, entry.entry_id)},
-        name="PostNord",
+        name=f"PostNord ({email})" if is_account and email else "PostNord",
         manufacturer="PostNord",
         entry_type=DeviceEntryType.SERVICE,
         configuration_url=CONFIGURATION_URL,

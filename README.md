@@ -7,7 +7,7 @@
 
 > 💬 Questions or feedback? Join the discussion on the [Home Assistant community](https://community.home-assistant.io/t/packages-postnl-dhl-nl-dpd-and-gls-parcel-integration/112433/).
 
-A custom Home Assistant integration that tracks your [PostNord](https://www.postnord.com) parcels across Sweden, Denmark, Norway and Finland. You track parcels by tracking code — **no PostNord account and no API key needed**.
+A custom Home Assistant integration that tracks your [PostNord](https://www.postnord.com) parcels across Sweden, Denmark, Norway and Finland. Track parcels by tracking code with **no account and no API key**, or log in once with your PostNord account and every parcel in it shows up by itself.
 
 Part of the [ha-parcel-integrations](https://ha-parcel-integrations.github.io/) family: it publishes the same canonical parcel format, statuses and events as the other carrier integrations, so it plugs straight into the [Parcel Aggregator](https://github.com/ha-parcel-integrations/ha-parcel-aggregator) and cross-carrier automations.
 
@@ -35,6 +35,7 @@ Part of the [ha-parcel-integrations](https://ha-parcel-integrations.github.io/) 
 ## Features
 
 - Track any number of PostNord parcels by tracking code — no account, no API key
+- Or log in with your PostNord account and have its parcels imported automatically — only rotating tokens are stored
 - Per-parcel sensor with the canonical status (`registered` / `in_transit` / `out_for_delivery` / `delivered` / …), the carrier's own status text, the expected delivery window and a tracking deep-link
 - Summary sensors: incoming parcels, next delivery, recently delivered parcels
 - Read-only **Deliveries** calendar with the expected delivery windows
@@ -45,8 +46,10 @@ Part of the [ha-parcel-integrations](https://ha-parcel-integrations.github.io/) 
 
 ## Requirements
 
-- A parcel and its tracking code (from the shipping confirmation email or
-  the missed-delivery card)
+- For tracking codes: a parcel and its tracking code (from the shipping
+  confirmation email or the missed-delivery card)
+- For the account: a PostNord account, and a desktop browser for the one-time
+  login
 
 ## Installation
 
@@ -62,9 +65,19 @@ Copy `custom_components/postnord` into your `config/custom_components/` folder a
 
 ## Configuration
 
-Add the integration via **Settings → Devices & Services → Add Integration → PostNord**, then confirm — there is no account or key to enter.
+Add the integration via **Settings → Devices & Services → Add Integration → PostNord** and choose how to follow your parcels. Both can be used side by side.
 
-Then add parcels via the integration's **Configure** dialog, the [`postnord.track_parcel`](#services) service, or a [dashboard button](examples/dashboards/add_parcel_card.yaml). The tracking code is on your shipping confirmation email or the missed-delivery card.
+### Tracking codes
+
+Confirm — there is no account or key to enter. Then add parcels via the integration's **Configure** dialog, the [`postnord.track_parcel`](#services) service, or a [dashboard button](examples/dashboards/add_parcel_card.yaml). The tracking code is on your shipping confirmation email or the missed-delivery card. There is one tracking-code hub.
+
+### Account (automatic import)
+
+The form shows a login link. Log in to PostNord in a desktop browser with the developer tools' Network tab open: PostNord ends the login at a `com.postnord.app://redirect?code=…` address the browser cannot open, and you paste that address back into the form within a few minutes. [Step-by-step instructions per browser](docs/finding-the-redirect-url.md).
+
+After that the integration renews its own access; your email and the rotating tokens are stored, nothing else. If PostNord stops accepting them, Home Assistant asks you to log in again the same way. Every parcel in the account is imported — there is no parcel list to manage, and each account is its own device. Parcels you deleted in the PostNord app are not shown.
+
+The account login uses the same service as the PostNord app, including the app's own access key. If PostNord changes that key, account entries stop updating (the log says so) until the integration is updated — logging in again will not help. Tracking-code hubs are not affected.
 
 ## Options
 
@@ -72,7 +85,7 @@ Open **Configure** on the integration entry:
 
 | Section | Option | Default | Description |
 |---|---|---|---|
-| Parcels | Add / remove | — | Manage the tracked tracking codes. Changes apply immediately, no restart. |
+| Parcels | Add / remove | — | Manage the tracked tracking codes. Changes apply immediately, no restart. Tracking-code hub only. |
 | Delivered parcels | Filter by / amount | last 7 days | How long delivered parcels stay visible on the delivered sensor. |
 | Parcel history | Include status history | off | Adds a `history` attribute per parcel with each status update. |
 
@@ -95,6 +108,9 @@ actually doing:
   immediately.
 - A small, fixed per-hub offset is added on top, so not every PostNord hub
   out there polls at exactly the same second.
+
+An **account** is polled every 45 minutes and never stops: its whole inbox
+comes back in one request, and new parcels have to be noticed.
 
 This is not user-configurable — it is the only polling behaviour this
 integration has.
@@ -156,6 +172,8 @@ Every payload is the full normalised parcel plus the hub's `device_id`. Events a
 | `postnord.track_parcel` | `tracking_code` | Start tracking a parcel |
 | `postnord.untrack_parcel` | `tracking_code` | Stop tracking a parcel |
 
+Both act on the tracking-code hub only, and are not registered while only an account is set up — an account imports its parcels by itself.
+
 ## Examples
 
 Ready-to-paste automations and dashboard snippets live in [`examples/`](examples/), including tracking a new parcel straight from a dashboard.
@@ -178,6 +196,8 @@ logger:
 ## Troubleshooting
 
 - **A parcel shows `unknown`** — PostNord has not scanned it yet (their API returns no shipment until the first scan), or the code is wrong. It will pick up automatically once scanned.
+- **The account asks to log in again** — PostNord no longer accepts the stored login. Repeat the [browser login](docs/finding-the-redirect-url.md) from the repair notification.
+- **The log says the app key was changed** — PostNord rotated the access key the account login relies on. Please [open an issue](https://github.com/ha-parcel-integrations/ha-postnord/issues/new); logging in again will not fix it.
 - **A status logs "Unrecognised PostNord status"** — please [open an issue](https://github.com/ha-parcel-integrations/ha-postnord/issues/new) with the logged line so the mapping can be extended.
 
 ## Related integrations

@@ -29,7 +29,9 @@ NEW_ISSUE_URL = (
 # DELIVERY, DELIVERED, DELIVERY_IMPOSSIBLE, EXPECTED_DELAY, RETURNED, STOPPED,
 # OTHER. ``OTHER`` is deliberately left unmapped (it is PostNord's own
 # catch-all) so it surfaces as ``unknown`` + a one-shot warning rather than
-# being mapped wrongly.
+# being mapped wrongly. The account inbox adds two literals of the same enum:
+# ``DELAYED`` (bucketed like ``EXPECTED_DELAY``) and ``DELIVERY_REFUSED`` (a
+# return leg in flight, so ``returning``).
 STATUS_MAP: dict[str, ParcelStatus] = {
     "CREATED": ParcelStatus.REGISTERED,
     "INFORMED": ParcelStatus.REGISTERED,
@@ -41,6 +43,8 @@ STATUS_MAP: dict[str, ParcelStatus] = {
     "EXPECTED_DELAY": ParcelStatus.PROBLEM,
     "RETURNED": ParcelStatus.RETURNING,
     "STOPPED": ParcelStatus.PROBLEM,
+    "DELAYED": ParcelStatus.PROBLEM,
+    "DELIVERY_REFUSED": ParcelStatus.RETURNING,
 }
 
 # PostNord reports "The delivery of the shipment item is in progress" as event

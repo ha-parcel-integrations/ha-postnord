@@ -39,9 +39,17 @@ KNOWN_CAPABILITIES = frozenset(
 # the comparison table on the docs site. Keep in lockstep with
 # normalize_parcel() in parcels.py: everything not listed here comes back as a
 # literal None there.
-CAPABILITIES = frozenset(
-    {"weight", "dimensions", "delivery_window", "pickup_point", "url", "history"}
-)
+#
+# Two sources with different field support, so this is per variant. The account
+# variant only claims what its payload has been seen to carry; widen it once a
+# real account response confirms more.
+CAPABILITIES_BY_VARIANT = {
+    "Tracking": frozenset(
+        {"weight", "dimensions", "delivery_window", "pickup_point", "url", "history"}
+    ),
+    "Account": frozenset({"weight", "url", "history"}),
+}
+CAPABILITIES = CAPABILITIES_BY_VARIANT["Tracking"]
 
 # PostNord's public "Track & Trace" REST API (``recipientview``). It is
 # **keyless** for the caller: authentication is a fixed public web-client
@@ -80,6 +88,50 @@ TRACKING_BAP_KEY = "web-ncp"
 # slot in without an options migration.
 CONF_PARCELS = "parcels"
 CONF_TRACKING_CODE = "tracking_code"
+
+# Which source an entry reads. Entries created before the account source have
+# no ``data`` at all, so every read must default to ``SOURCE_TRACKING``.
+CONF_SOURCE = "source"
+SOURCE_ACCOUNT = "account"
+SOURCE_TRACKING = "tracking"
+CONF_EMAIL = "email"
+CONF_ACCESS_TOKEN = "access_token"
+CONF_REFRESH_TOKEN = "refresh_token"
+CONF_REDIRECT_URL = "redirect_url"
+
+# The PostNord receiver app's account login: a public native OAuth client with
+# PKCE and no secret. Its only registered redirect is the app's own scheme, so
+# the browser cannot hand the code back to Home Assistant — the user pastes the
+# final redirect URL instead.
+ACCOUNT_AUTHORIZE_URL = "https://account.postnord.com/auth"
+ACCOUNT_TOKEN_URL = "https://account.postnord.com/oauth2/token"
+ACCOUNT_USERINFO_URL = "https://account.postnord.com/userinfo"
+ACCOUNT_CLIENT_ID = "receiverappprod3gvTgY5ATtYWZZy"
+ACCOUNT_REDIRECT_URI = "com.postnord.app://redirect"
+ACCOUNT_SCOPES = (
+    "openid",
+    "offline_access",
+    "https://api.postnord.com/scopes/shipment/eventsorterservice/recipient",
+    "https://api.postnord.com/scopes/receiverapp-bff/track",
+    "https://api.postnord.com/scopes/trackedshipments/track",
+    "https://api.postnord.com/scopes/recipientinstructions/read",
+    "https://api.postnord.com/scopes/eta/livetracking",
+    "https://api.postnord.com/scopes/preferences/recipient",
+)
+ACCOUNT_TRACKING_URL = (
+    "https://api2.postnord.com/rest/customer/v2/receiverapp/tracking"
+)
+# The receiver app's gateway subscription key and context header. Shared app
+# material, not a user secret: it can be rotated by PostNord independently of
+# any login, so a rejection is a compatibility failure, never a reauth prompt.
+# Must never reach the UI, diagnostics or a log line.
+ACCOUNT_API_KEY = "1ecf161be47543b19fce03f953a6e8d2"
+ACCOUNT_CONTEXT = "mobileapp"
+ACCOUNT_LOCALE = "en"
+ACCOUNT_REDIRECT_DOCS_URL = (
+    "https://github.com/ha-parcel-integrations/ha-postnord/blob/main/docs/"
+    "finding-the-redirect-url.md"
+)
 
 # Delivered-parcels retention: keep delivered parcels visible for the last N
 # days, or keep only the N most recent — identical across the suite.
