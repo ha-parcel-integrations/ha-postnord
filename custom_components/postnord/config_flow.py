@@ -221,12 +221,14 @@ class PostNordConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class PostNordOptionsFlowHandler(OptionsFlow):
-    """Manage tracked parcels, delivered retention and history in one sectioned form.
+    """Manage tracked parcels separately from integration settings.
 
-    Mirrors the other suite carriers' section layout (here: ``parcels`` /
-    ``delivered`` / ``history``). Changes apply live via HA's
-    options-update listener (which refreshes the coordinator), so new/removed
-    per-parcel sensors appear and disappear immediately.
+    ``async_step_init`` shows a menu (``parcels`` / ``settings``) rather than
+    one long sectioned form. ``parcels`` edits the whole tracked-code list at
+    once; ``settings`` holds delivered-parcel retention and history. Changes
+    apply live via HA's options-update listener (which refreshes the
+    coordinator), so new/removed per-parcel sensors appear and disappear
+    immediately.
     """
 
     async def async_step_init(

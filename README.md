@@ -83,11 +83,12 @@ The account login uses the same service as the PostNord app, including the app's
 
 Open **Configure** on the integration entry:
 
-| Section | Option | Default | Description |
-|---|---|---|---|
-| Parcels | Add / remove | — | Manage the tracked tracking codes. Changes apply immediately, no restart. Tracking-code hub only. |
-| Delivered parcels | Filter by / amount | last 7 days | How long delivered parcels stay visible on the delivered sensor. |
-| Parcel history | Include status history | off | Adds a `history` attribute per parcel with each status update. |
+| Menu item | Description |
+|---|---|
+| Parcels | Edit the full list of tracked codes at once (add or remove any number, then save). Tracking-code hub only; an account entry has no list to edit. |
+| Settings | Delivered-parcel retention (filter by / amount, default last 7 days) and the opt-in status-history attribute, which adds a `history` attribute per parcel with each status update (off by default). |
+
+Changes apply immediately, no restart.
 
 ## Dynamic polling
 
