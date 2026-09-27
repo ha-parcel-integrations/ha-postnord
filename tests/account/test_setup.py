@@ -18,7 +18,7 @@ from custom_components.postnord.const import (
 from custom_components.postnord.diagnostics import async_get_config_entry_diagnostics
 
 from ..payloads import active_sample
-from .payloads import tracking_body
+from .payloads import captured_service_point_delivery, tracking_body
 
 EMAIL = "someone@example.com"
 _TRACKING = "custom_components.postnord.account.client.PostNordAccountClient.async_get_tracking"
@@ -145,4 +145,35 @@ async def test_diagnostics_never_carry_credentials_or_pii(hass):
         assert secret not in dumped
     assert "1ecf161be47543b19fce03f953a6e8d2" not in dumped
     assert result["entry_data"][CONF_SOURCE] == SOURCE_ACCOUNT
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_diagnostics_redact_the_captured_account_shape(hass):
+    """Every private detail of a real account shipment is marked redacted."""
+    entry = _account(hass)
+    raw = captured_service_point_delivery()
+    assert await _setup(hass, entry, {"activeShipments": [], "archivedShipments": [raw]})
+    entry.runtime_data.coordinator.delivered = [
+        __import__(
+            "custom_components.postnord.account.parcels", fromlist=["x"]
+        ).normalize_account_parcel(raw, include_history=True)
+    ]
+    result = await async_get_config_entry_diagnostics(hass, entry)
+    dumped = repr(result)
+    for private in (
+        "00000000000000021",  # tracking number / item id / search string
+        "ORDER-0001",  # the shop's order reference
+        "EXAMPLE SERVICE POINT",  # pickup point, canonical and raw
+        "EXAMPLE CITY",
+        "11111",
+        "22222",
+        "Example Shop",
+        "EXAMPLE PAKETTERMINAL",
+    ):
+        assert private not in dumped, private
+    delivered = result["delivered"][0]
+    # the diagnostic value of the dump survives
+    assert delivered["status"] == "delivered"
+    assert delivered["raw"]["items"][0]["status"] == "DELIVERED"
+    assert delivered["raw"]["items"][0]["dimensions"]["length"]["unit"] == "m"
     assert await hass.config_entries.async_unload(entry.entry_id)

@@ -12,7 +12,12 @@ from custom_components.postnord.status import map_parcel_status
 
 from ..payloads import event
 from ..tracking.test_parcels import CANONICAL_KEYS
-from .payloads import ACCOUNT_ACTIVE_CODE, account_active, account_delivered
+from .payloads import (
+    ACCOUNT_ACTIVE_CODE,
+    account_active,
+    account_delivered,
+    captured_service_point_delivery,
+)
 
 
 def test_publishes_exactly_the_canonical_keys():
@@ -33,42 +38,77 @@ def test_active_parcel():
     assert parcel["history"] is None
 
 
-def test_unconfirmed_fields_stay_none():
+def test_eta_is_a_point_estimate_until_delivered():
     raw = account_active()
     raw["estimatedTimeOfArrival"] = "2026-04-29T13:00:00Z"
-    raw["destinationDeliveryPoint"] = {"name": "Example Point"}
-    raw["items"][0]["statedMeasurement"] = {
-        "length": {"value": "0.3", "unit": "m"},
-        "width": {"value": "0.2", "unit": "m"},
-        "height": {"value": "0.1", "unit": "m"},
-    }
     parcel = normalize_account_parcel(raw)
-    assert parcel["planned_from"] is None
+    assert parcel["planned_from"] == "2026-04-29T13:00:00Z"
     assert parcel["planned_to"] is None
-    assert parcel["pickup_point"] is None
-    assert parcel["dimensions"] is None
+    raw["status"] = "DELIVERED"
+    assert normalize_account_parcel(raw)["planned_from"] is None
 
 
-def test_unconfirmed_field_sighting_warns_once_with_key_only(caplog):
+def test_public_time_of_arrival_is_the_eta_fallback():
     raw = account_active()
-    raw["destinationDeliveryPoint"] = {"name": "Secret Street 1"}
-    with caplog.at_level(logging.WARNING):
-        normalize_account_parcel(raw)
-        normalize_account_parcel(raw)
-    warnings = [r for r in caplog.records if "destinationDeliveryPoint" in r.getMessage()]
-    assert len(warnings) == 1
-    assert "Secret Street" not in caplog.text
+    raw["publicTimeOfArrival"] = "2026-04-30T09:00:00Z"
+    assert normalize_account_parcel(raw)["planned_from"] == "2026-04-30T09:00:00Z"
 
 
 def test_missing_expected_field_warns_once(caplog):
     raw = account_active()
-    del raw["statusText"]
+    del raw["status"]
     del raw["items"][0]["events"]
     with caplog.at_level(logging.WARNING):
         normalize_account_parcel(raw)
         normalize_account_parcel(raw)
-    assert caplog.text.count("'statusText'") == 1
+    assert caplog.text.count("'status'") == 1
     assert caplog.text.count("'items[].events'") == 1
+    assert caplog.text.count("'items[].statusText'") == 1
+
+
+def test_captured_service_point_delivery():
+    """The real account shape, scrubbed — see payloads.py."""
+    raw = captured_service_point_delivery()
+    parcel = normalize_account_parcel(raw, include_history=True)
+    assert parcel["status"] == ParcelStatus.DELIVERED
+    assert parcel["raw_status"] == "The shipment item has been delivered to the recipient"
+    assert parcel["delivered_at"] == "2026-09-23T14:27:00Z"
+    assert parcel["sender"] == "Example Shop"
+    assert parcel["receiver"] is None
+    assert parcel["pickup_point"] == "EXAMPLE SERVICE POINT"
+    assert parcel["pickup"] is False
+    assert parcel["weight"] == 0.2
+    assert parcel["dimensions"] == {
+        "length": 28.0, "width": 20.0, "height": 2.0, "text": "28 x 20 x 2 cm",
+    }
+    assert [e["status"] for e in parcel["history"]][-4:] == [
+        ParcelStatus.OUT_FOR_DELIVERY,
+        ParcelStatus.AT_PICKUP_POINT,
+        ParcelStatus.AT_PICKUP_POINT,  # the text-message event (OTHER)
+        ParcelStatus.DELIVERED,
+    ]
+    assert all(entry["status"] is not None for entry in parcel["history"])
+
+
+def test_raw_is_the_untouched_shipment():
+    raw = captured_service_point_delivery()
+    assert normalize_account_parcel(raw)["raw"] == captured_service_point_delivery()
+
+
+def test_captured_shape_raises_no_missing_field_warning(caplog):
+    with caplog.at_level(logging.WARNING):
+        normalize_account_parcel(captured_service_point_delivery())
+    assert "missing" not in caplog.text
+
+
+def test_unseen_direction_warns_once_and_stays_listed(caplog):
+    raw = account_active()
+    raw["userData"]["direction"] = "OUTGOING"
+    with caplog.at_level(logging.WARNING):
+        normalize_account_parcel(raw)
+        parcel = normalize_account_parcel(raw)
+    assert caplog.text.count("direction=OUTGOING") == 1
+    assert parcel["barcode"] == ACCOUNT_ACTIVE_CODE
 
 
 def test_delivered_parcel_takes_the_delivery_event_time():
@@ -151,8 +191,48 @@ def test_account_capabilities_match_what_the_normaliser_fills():
 
     claimed = CAPABILITIES_BY_VARIANT["Account"]
     assert claimed <= KNOWN_CAPABILITIES
-    parcel = normalize_account_parcel(account_active(), include_history=True)
-    for field in KNOWN_CAPABILITIES:
-        populated = field == "delivery_window" and parcel["planned_from"] is not None
-        populated = populated or (field != "delivery_window" and parcel[field] is not None)
-        assert populated == (field in claimed), field
+    delivered = normalize_account_parcel(
+        captured_service_point_delivery(), include_history=True
+    )
+    active = account_active()
+    active["estimatedTimeOfArrival"] = "2026-04-29T13:00:00Z"
+    on_the_way = normalize_account_parcel(active)
+    filled = {
+        "weight": delivered["weight"],
+        "dimensions": delivered["dimensions"],
+        "pickup_point": delivered["pickup_point"],
+        "url": delivered["url"],
+        "history": delivered["history"],
+        "delivery_window": on_the_way["planned_from"],
+    }
+    assert {field for field, value in filled.items() if value is not None} == claimed
+
+
+def test_finished_return_is_delivered_and_keeps_its_text():
+    raw = account_active()
+    raw["status"] = "RETURNED"
+    raw["statusText"] = {"header": "Returned to sender"}
+    raw["items"][0]["events"] += [
+        event("RETURNED", "2026-05-07T04:42:01Z", "Returned to the sender"),
+        event("DELIVERED", "2026-05-13T20:55:00Z", "Delivered with Power Of Attorney", "21"),
+    ]
+    parcel = normalize_account_parcel(raw)
+    assert parcel["status"] == ParcelStatus.DELIVERED
+    assert parcel["delivered"] is True
+    assert parcel["delivered_at"] == "2026-05-13T20:55:00Z"
+    assert parcel["raw_status"] == "Returned to sender"
+
+
+def test_return_in_flight_stays_returning():
+    raw = account_active()
+    raw["status"] = "RETURNED"
+    raw["items"][0]["events"].append(
+        event("RETURNED", "2026-05-07T04:42:01Z", "Returned to the sender")
+    )
+    assert normalize_account_parcel(raw)["status"] == ParcelStatus.RETURNING
+
+
+def test_pickup_point_falls_back_to_where_the_parcel_waited():
+    raw = captured_service_point_delivery()
+    del raw["destinationDeliveryPoint"]
+    assert normalize_account_parcel(raw)["pickup_point"] == "EXAMPLE SERVICE POINT"

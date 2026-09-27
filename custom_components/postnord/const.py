@@ -41,13 +41,15 @@ KNOWN_CAPABILITIES = frozenset(
 # literal None there.
 #
 # Two sources with different field support, so this is per variant. The account
-# variant only claims what its payload has been seen to carry; widen it once a
-# real account response confirms more.
+# variant fills the same fields from the same shipment object; keep the dict so
+# a future divergence stays a one-line change.
 CAPABILITIES_BY_VARIANT = {
     "Tracking": frozenset(
         {"weight", "dimensions", "delivery_window", "pickup_point", "url", "history"}
     ),
-    "Account": frozenset({"weight", "url", "history"}),
+    "Account": frozenset(
+        {"weight", "dimensions", "delivery_window", "pickup_point", "url", "history"}
+    ),
 }
 CAPABILITIES = CAPABILITIES_BY_VARIANT["Tracking"]
 

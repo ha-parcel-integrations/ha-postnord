@@ -32,6 +32,8 @@ NEW_ISSUE_URL = (
 # being mapped wrongly. The account inbox adds two literals of the same enum:
 # ``DELAYED`` (bucketed like ``EXPECTED_DELAY``) and ``DELIVERY_REFUSED`` (a
 # return leg in flight, so ``returning``).
+OTHER_STATUS = "OTHER"
+
 STATUS_MAP: dict[str, ParcelStatus] = {
     "CREATED": ParcelStatus.REGISTERED,
     "INFORMED": ParcelStatus.REGISTERED,
@@ -97,5 +99,8 @@ def map_event_status(code: str | None) -> ParcelStatus | None:
     mapped = STATUS_MAP.get(code)
     if mapped is not None:
         return mapped
-    warn_unmapped_status(code)
+    # ``OTHER`` on an event is a notification or an intermediate scan, not an
+    # unknown status: the history builder carries the previous status over it.
+    if code != OTHER_STATUS:
+        warn_unmapped_status(code)
     return None

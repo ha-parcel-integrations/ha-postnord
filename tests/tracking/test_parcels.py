@@ -4,6 +4,7 @@ These need no Home Assistant instance — the whole point of keeping
 ``parcels.py`` free of I/O is that the carrier-specific mapping (the part you
 rewrite per carrier) can be tested as plain functions.
 """
+import logging
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -461,3 +462,59 @@ def test_capabilities_are_known_values():
 
 def test_capabilities_cover_dimensions():
     assert "dimensions" in CAPABILITIES
+
+
+def test_history_carries_the_status_over_other_events(caplog):
+    """OTHER is a notification or scan: it keeps the status, and never warns."""
+    events = [
+        event("EN_ROUTE", "2026-09-21T16:32:00Z", "Under transportation", "31"),
+        event("OTHER", "2026-09-21T18:40:00Z", "Under transportation", "z3D"),
+        event("AVAILABLE_FOR_DELIVERY", "2026-09-23T07:34:00Z", "At a service point", "1"),
+        event("OTHER", "2026-09-23T07:35:26Z", "Text message sent", "z82"),
+    ]
+    with caplog.at_level(logging.WARNING):
+        history = build_history(events)
+    assert [e["status"] for e in history] == [
+        ParcelStatus.IN_TRANSIT,
+        ParcelStatus.IN_TRANSIT,
+        ParcelStatus.AT_PICKUP_POINT,
+        ParcelStatus.AT_PICKUP_POINT,
+    ]
+    assert "Unrecognised" not in caplog.text
+
+
+def test_history_other_before_any_status_stays_none():
+    history = build_history([event("OTHER", "2026-09-21T18:40:00Z", "Scan", "z3D")])
+    assert history[0]["status"] is None
+
+
+def test_unknown_event_status_still_warns(caplog):
+    with caplog.at_level(logging.WARNING):
+        history = build_history([event("TELEPORTED", "2026-09-21T18:40:00Z", "?")])
+    assert history[0]["status"] is None
+    assert "TELEPORTED" in caplog.text
+
+
+def test_finished_return_is_delivered_on_the_tracker_too():
+    raw = delivered_sample()
+    raw["status"] = "RETURNED"
+    raw["items"][0]["events"].insert(
+        0, event("DELIVERED", "2026-05-13T20:55:00Z", "Delivered back", "21")
+    )
+    assert normalize_parcel(raw)["status"] == ParcelStatus.DELIVERED
+
+
+def test_pickup_point_prefers_destination_delivery_point():
+    raw = pickup_sample()
+    raw["destinationDeliveryPoint"] = {"name": "Example Destination Point"}
+    assert normalize_parcel(raw)["pickup_point"] == "Example Destination Point"
+
+
+def test_dimensions_fall_back_to_item_dimensions():
+    raw = delivered_sample()
+    raw["items"][0]["dimensions"] = {
+        "length": {"value": "0.28", "unit": "m"},
+        "width": {"value": "0.2", "unit": "m"},
+        "height": {"value": "0.02", "unit": "m"},
+    }
+    assert normalize_parcel(raw)["dimensions"]["text"] == "28 x 20 x 2 cm"

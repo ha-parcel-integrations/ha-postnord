@@ -54,6 +54,9 @@ TO_REDACT = {
     "eventDescription",
     "location",
     "collectCode",
+    "customerReference",
+    "searchString",
+    "pickup_point",
 }
 
 

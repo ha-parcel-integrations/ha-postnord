@@ -31,6 +31,7 @@ from ..const import (
 )
 from ..status import (
     NEW_ISSUE_URL,
+    OTHER_STATUS,
     OUT_FOR_DELIVERY_EVENT_CODE,
     map_event_status,
     map_parcel_status,
@@ -191,6 +192,8 @@ def build_history(
             "status": _event_status(event),
             "raw_status": event.get("eventDescription") or event.get("eventCode"),
         }
+        if event.get("status") == OTHER_STATUS:
+            entry["_carry"] = True
         parsed = parse_iso(timestamp)
         if parsed is None:
             unparseable.append(entry)
@@ -198,6 +201,13 @@ def build_history(
             parseable.append((parsed, entry))
     parseable.sort(key=lambda item: item[0])
     ordered = [entry for _, entry in parseable] + unparseable
+    # A notification or intermediate scan (``OTHER``) does not move the parcel,
+    # so it keeps the status the parcel already had.
+    previous: ParcelStatus | None = None
+    for entry in ordered:
+        if entry.pop("_carry", False) and entry["status"] is None:
+            entry["status"] = previous
+        previous = entry["status"] or previous
     return ordered[-max_events:]
 
 
@@ -241,6 +251,7 @@ def normalize_parcel(raw: dict, *, include_history: bool = False) -> dict:
 
     if status is ParcelStatus.IN_TRANSIT and _latest_event_is_out_for_delivery(events):
         status = ParcelStatus.OUT_FOR_DELIVERY
+    status = settle_return(status, events)
     delivered = status is ParcelStatus.DELIVERED
 
     # ETA is a single instant (``estimatedTimeOfArrival``), so it is a point
@@ -264,7 +275,7 @@ def normalize_parcel(raw: dict, *, include_history: bool = False) -> dict:
         "planned_from": None if delivered else planned_from,
         "planned_to": None,
         "pickup": status is ParcelStatus.AT_PICKUP_POINT,
-        "pickup_point": (raw.get("deliveryPoint") or {}).get("name") or None,
+        "pickup_point": _pickup_point_name(raw, events),
         "url": tracking_url(tracking_code),
         "weight": _weight_kg(raw),
         "dimensions": _dimensions_cm(raw),
@@ -280,6 +291,31 @@ def _flatten_events(raw: dict) -> list[dict]:
         if isinstance(item, dict):
             events.extend(e for e in (item.get("events") or []) if isinstance(e, dict))
     return events
+
+
+def _newest_event(events: list[dict]) -> dict | None:
+    """Return the newest event by ``eventTime``, or ``None``."""
+    dated = [
+        (parsed, event)
+        for event in events
+        if (parsed := parse_iso(to_iso_timestamp(event.get("eventTime")))) is not None
+    ]
+    return max(dated, key=lambda item: item[0])[1] if dated else None
+
+
+def settle_return(status: ParcelStatus, events: list[dict]) -> ParcelStatus:
+    """Report a return that arrived back at the sender as ``delivered``.
+
+    PostNord ends a return leg with a ``DELIVERED`` event while the shipment
+    keeps saying ``RETURNED``. Left ``returning``, a finished return would sit
+    among the active parcels forever; ``raw_status`` still names the return.
+    """
+    if status is not ParcelStatus.RETURNING:
+        return status
+    newest = _newest_event(events)
+    if newest is not None and newest.get("status") == "DELIVERED":
+        return ParcelStatus.DELIVERED
+    return status
 
 
 def _latest_event_is_out_for_delivery(events: list[dict]) -> bool:
@@ -340,6 +376,7 @@ def _weight_kg(raw: dict) -> float | None:
         raw.get("assessedWeight"),
         _measurement(raw, "statedMeasurement").get("weight"),
         _measurement(raw, "assessedMeasurement").get("weight"),
+        _first_item_value(raw, "weight"),
     ):
         value = _quantity(weight, factors)
         if value is not None:
@@ -347,20 +384,53 @@ def _weight_kg(raw: dict) -> float | None:
     return None
 
 
-def _dimensions_cm(raw: dict) -> dict[str, Any] | None:
-    """Return the canonical dimensions from the item's declared L×W×H, or ``None``.
+def _first_item_value(raw: dict, key: str) -> Any:
+    """Return ``items[0][key]``, or ``None``."""
+    items = raw.get("items")
+    if isinstance(items, list) and items and isinstance(items[0], dict):
+        return items[0].get(key)
+    return None
 
-    PostNord reports each axis in metres under ``statedMeasurement``; the
-    contract is centimetres.
+
+def _dimensions_cm(raw: dict) -> dict[str, Any] | None:
+    """Return the canonical dimensions from the item's L×W×H, or ``None``.
+
+    PostNord reports each axis in metres, under ``statedMeasurement`` on the
+    tracker and ``dimensions`` on the account list; the contract is
+    centimetres.
     """
-    stated = _measurement(raw, "statedMeasurement")
-    axes = [
-        _quantity(stated.get(axis), {"m": 100, "cm": 1, "mm": 0.1})
-        for axis in ("length", "width", "height")
+    for key in ("statedMeasurement", "dimensions"):
+        measured = _measurement(raw, key)
+        axes = [
+            _quantity(measured.get(axis), {"m": 100, "cm": 1, "mm": 0.1})
+            for axis in ("length", "width", "height")
+        ]
+        if all(axis is not None for axis in axes):
+            return format_dimensions(*(round(axis, 1) for axis in axes))
+    return None
+
+
+def _pickup_point_name(raw: dict, events: list[dict]) -> str | None:
+    """Return the pickup point's name, or ``None``.
+
+    The shipment names it under ``destinationDeliveryPoint`` (seen on the
+    account list) or ``deliveryPoint``; failing both, the location of the
+    newest "available for pickup" event is where the parcel actually waited.
+    """
+    for key in ("destinationDeliveryPoint", "deliveryPoint"):
+        point = raw.get(key)
+        if isinstance(point, dict) and point.get("name"):
+            return point["name"]
+    waiting = [
+        (parsed, event)
+        for event in events
+        if event.get("status") == "AVAILABLE_FOR_DELIVERY"
+        and (parsed := parse_iso(to_iso_timestamp(event.get("eventTime")))) is not None
     ]
-    if any(axis is None for axis in axes):
+    if not waiting:
         return None
-    return format_dimensions(*(round(axis, 1) for axis in axes))
+    location = max(waiting, key=lambda item: item[0])[1].get("location")
+    return (location.get("locationName") or None) if isinstance(location, dict) else None
 
 
 def sort_parcels_by_ts(

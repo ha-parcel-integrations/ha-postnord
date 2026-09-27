@@ -61,15 +61,30 @@ re-export shims kept so existing imports still resolve
   payload with its own one-shot WARNING net. `events.py` holds the HA-bus
   contract both coordinators fire.
 - **The account normaliser reuses the tracker's field extractors**
-  (`_flatten_events`, `_weight_kg`, `build_history`, …) because the account
-  list carries the same shipment object — but it deliberately leaves
-  `planned_from`, `pickup_point` and `dimensions` `None` until a real active
-  account parcel shows where they live; a first sighting of a candidate key
-  warns once, key names only. Its payload is still synthetic in the tests;
-  a scrubbed real account response is the 1.0.0 gate for this source.
+  (`_flatten_events`, `_weight_kg`, `_dimensions_cm`, `_pickup_point_name`,
+  `build_history`, `settle_return`) because the account list carries the same
+  shipment object, with different placement — confirmed on a real account
+  response 2026-09-27 (`tests/account/payloads.py::captured_service_point_delivery`):
+  `statusText` sits on each item, measurements are `items[].dimensions` /
+  `items[].weight`, the pickup point is `destinationDeliveryPoint.name`, and the
+  consignee has no name (`receiver` stays `None`). The extractors try both
+  placements, so the tracker benefits too. Still unconfirmed: the ETA key on an
+  *active* account parcel (read from `estimatedTimeOfArrival`, as on the
+  tracker), and any `userData.direction` other than `INCOMING` (warns once).
 - **`CAPABILITIES_BY_VARIANT`** (`Tracking` / `Account`), `CAPABILITIES`
-  aliased to `Tracking` for the docs-site table. Widen `Account` only together
-  with the normaliser; a test ties the two.
+  aliased to `Tracking` for the docs-site table. Both variants fill every
+  optional field today; a test ties the Account set to what the normaliser
+  fills.
+- **History: an `OTHER` event keeps the previous status.** On events `OTHER`
+  is PostNord's notification / intermediate-scan code (`z3D`, `z82`, …), not
+  an unknown status, so `build_history` carries the prior canonical status over
+  it and `map_event_status` does not warn for it. A *shipment*-level `OTHER`
+  still maps to `unknown` + WARNING.
+- **A finished return is `delivered`** (`settle_return`): PostNord ends a
+  return leg with a `DELIVERED` event while the shipment keeps `RETURNED`. Seen
+  in a real account history 2026-09-27. Same rule as bpost; `raw_status` keeps
+  the return text. Without it an archived return sits among the active parcels
+  forever.
 - **The account coordinator exposes the tracking coordinator's surface**
   (`data` = active incoming, `delivered`, `delivered_codes`,
   `current_tier_minutes`, `last_success_time`), so sensors, calendar and
@@ -130,9 +145,12 @@ every account-payload PII key are in `TO_REDACT`;
   shipment: real delivered shipments confirmed 2026-08-24 drop the key entirely
   (not null) once delivered, which is the correct shape — an ETA is meaningless
   after delivery — so that case no longer warns.
-- **`dimensions` come from `items[0].statedMeasurement`** (sender-declared L×W×H, in
-  metres → converted to cm); `None` when an axis is missing. Weight prefers
-  `totalWeight`, then stated, then assessed. The ETA is a single instant
+- **`dimensions` come from `items[0].statedMeasurement`**, else
+  `items[0].dimensions` (the account placement) — L×W×H in metres → cm; `None`
+  when an axis is missing. Weight prefers `totalWeight`, then stated, then
+  assessed, then `items[0].weight`. `pickup_point` is
+  `destinationDeliveryPoint.name`, else `deliveryPoint.name`, else the location
+  of the newest `AVAILABLE_FOR_DELIVERY` event. The ETA is a single instant
   (`planned_to` always `None`). History is free (same `items[].events` list). Reflected in `const.py`'s `CAPABILITIES` (feeds the
   docs site's comparison table) — keep the two in agreement if that ever changes.
 
