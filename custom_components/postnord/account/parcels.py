@@ -71,7 +71,7 @@ def check_account_shape(raw: dict) -> None:
             )
     user_data = raw.get("userData")
     direction = user_data.get("direction") if isinstance(user_data, dict) else None
-    if direction not in (None, "INCOMING"):
+    if direction not in (None, "INCOMING", "OUTGOING"):
         # An enum value, not PII; still counted as incoming so nothing vanishes.
         _warn_once(
             f"userData.direction={direction}",
@@ -85,6 +85,17 @@ def _first_item(raw: dict) -> dict:
     if isinstance(items, list) and items and isinstance(items[0], dict):
         return items[0]
     return {}
+
+
+def is_outgoing(raw: dict) -> bool:
+    """Whether the account sent this parcel rather than receives it.
+
+    Mirrors the PostNord app: only ``userData.direction == "OUTGOING"`` is
+    outgoing; anything else, including a missing value, counts as incoming so
+    a parcel can never disappear.
+    """
+    user_data = raw.get("userData")
+    return isinstance(user_data, dict) and user_data.get("direction") == "OUTGOING"
 
 
 def account_barcode(raw: dict) -> str | None:

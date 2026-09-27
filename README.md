@@ -127,9 +127,12 @@ Standard HA removal applies: **Settings → Devices & Services → PostNord → 
 | `sensor.postnord_parcel_<code>` | One per tracked parcel; state is the canonical status, attributes carry the full normalised parcel |
 | `sensor.postnord_next_delivery` | Earliest expected delivery moment across all active parcels |
 | `sensor.postnord_delivered_parcels` | Recently delivered parcels (see the retention option) |
+| `sensor.postnord_awaiting_pickup` | Parcels waiting for you at a pickup point |
 | `sensor.postnord_last_successful_update` | Diagnostic: when PostNord was last polled successfully |
 
 A delivered parcel moves from its per-parcel sensor to the delivered sensor automatically.
+
+An **account** gets the same sensors, named after the account (for example `sensor.postnord_someone_example_com_incoming_parcels`), plus two for the parcels you **send**: `…_outgoing_parcels` (on the way) and `…_outgoing_delivered_parcels` (recently delivered, same retention option). Parcels you send never count as incoming or awaiting pickup.
 
 A **`button.postnord_refresh`** entity triggers an immediate poll outside the
 regular interval, and a **`calendar.postnord_deliveries`** entity shows expected
@@ -145,7 +148,7 @@ The `status` field is the carrier-agnostic enum shared by the whole integration 
 | `in_transit` | In the sorting network |
 | `out_for_delivery` | With the courier today |
 | `at_pickup_point` | Waiting for you at a pickup location |
-| `delivered` | Delivered |
+| `delivered` | Delivered — also a return that arrived back at the sender (`raw_status` says so) |
 | `returning` | Going back to the sender |
 | `problem` | PostNord reports an exception |
 | `unknown` | Not yet scanned, or a status we have not mapped yet |
@@ -162,6 +165,10 @@ The integration fires these on the event bus (also available as device triggers 
 | `postnord_parcel_status_changed` | A parcel's canonical status changes (`old_status` / `new_status` in the payload), except the final hop to delivered |
 | `postnord_parcel_delivered` | A parcel is delivered |
 | `postnord_parcel_delivery_time_changed` | The expected delivery window changes |
+| `postnord_outgoing_parcel_status_changed` | A parcel you sent from your account changes status |
+| `postnord_outgoing_parcel_delivered` | A parcel you sent from your account is delivered |
+
+A parcel you send fires only the two outgoing events: it appearing is not news, and its expected delivery time is the recipient's business.
 
 Every payload is the full normalised parcel plus the hub's `device_id`. Events are suppressed on the first refresh after start-up.
 

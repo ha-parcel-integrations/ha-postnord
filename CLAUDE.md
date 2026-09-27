@@ -70,11 +70,13 @@ re-export shims kept so existing imports still resolve
   consignee has no name (`receiver` stays `None`). The extractors try both
   placements, so the tracker benefits too. Still unconfirmed: the ETA key on an
   *active* account parcel (read from `estimatedTimeOfArrival`, as on the
-  tracker), and any `userData.direction` other than `INCOMING` (warns once).
+  tracker), and a real `OUTGOING` parcel (the value itself is from the app).
 - **`CAPABILITIES_BY_VARIANT`** (`Tracking` / `Account`), `CAPABILITIES`
   aliased to `Tracking` for the docs-site table. Both variants fill every
   optional field today; a test ties the Account set to what the normaliser
   fills.
+- **Event codes `45` / `z2F` are "extended retention time"** in the app, so
+  their history entry is `at_pickup_point` whatever the event's own status.
 - **History: an `OTHER` event keeps the previous status.** On events `OTHER`
   is PostNord's notification / intermediate-scan code (`z3D`, `z82`, …), not
   an unknown status, so `build_history` carries the prior canonical status over
@@ -88,9 +90,26 @@ re-export shims kept so existing imports still resolve
 - **The account coordinator exposes the tracking coordinator's surface**
   (`data` = active incoming, `delivered`, `delivered_codes`,
   `current_tier_minutes`, `last_success_time`), so sensors, calendar and
-  diagnostics need no source switch. Unlike bpost, there are no outgoing
-  sensors: the account list has no observed direction marker, so everything is
-  incoming — an always-zero outgoing sensor would be a wrong claim.
+  diagnostics need no source switch; it adds `outgoing_active` /
+  `outgoing_delivered`, read by the two account-only outgoing sensors.
+- **Direction follows the PostNord app**: only `userData.direction ==
+  "OUTGOING"` is outgoing, anything else counts as incoming so a parcel can
+  never vanish (bpost's rule too). Outgoing parcels fire only
+  `_outgoing_parcel_status_changed` / `_outgoing_parcel_delivered` and never
+  count toward incoming or awaiting pickup. A direction value other than
+  `INCOMING`/`OUTGOING` warns once.
+- **Event codes `45` / `z2F` are "extended retention time"** in the app, so
+  their history entry is `at_pickup_point` whatever the event's own status.
+- **History: an `OTHER` event keeps the previous status.** On events `OTHER`
+  is PostNord's notification / intermediate-scan code (`z3D`, `z82`, …), not
+  an unknown status, so `build_history` carries the prior canonical status over
+  it and `map_event_status` does not warn for it. A *shipment*-level `OTHER`
+  still maps to `unknown` + WARNING.
+- **A finished return is `delivered`** (`settle_return`): PostNord ends a
+  return leg with a `DELIVERED` event while the shipment keeps `RETURNED`. Seen
+  in a real account history 2026-09-27. Same rule as bpost; `raw_status` keeps
+  the return text. Without it an archived return sits among the active parcels
+  forever.
 
 **An entry's source is `entry.data[CONF_SOURCE]` (`tracking` / `account`).**
 Setup opens on a menu. The tracking hub keeps unique id `postnord`, and that

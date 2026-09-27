@@ -18,7 +18,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PostNordConfigEntry
-from .const import DOMAIN, ParcelStatus
+from .const import (
+    CONF_SOURCE,
+    DOMAIN,
+    SOURCE_ACCOUNT,
+    SOURCE_TRACKING,
+    ParcelStatus,
+)
 from .device import ATTRIBUTION, build_device_info
 from .tracking.coordinator import PostNordCoordinator
 from .tracking.parcels import parse_iso
@@ -58,6 +64,8 @@ async def async_setup_entry(
         f"{entry_id}_next_delivery",
         f"{entry_id}_delivered_parcels",
         f"{entry_id}_last_update",
+        f"{entry_id}_outgoing_parcels",
+        f"{entry_id}_outgoing_delivered_parcels",
     }
     for entity_entry in er.async_entries_for_config_entry(registry, entry_id):
         if (
@@ -81,6 +89,9 @@ async def async_setup_entry(
         )
     entities.append(PostNordNextDeliverySensor(coordinator, entry))
     entities.append(PostNordDeliveredParcelsSensor(coordinator, entry))
+    if entry.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_ACCOUNT:
+        entities.append(PostNordOutgoingParcelsSensor(coordinator, entry))
+        entities.append(PostNordOutgoingDeliveredParcelsSensor(coordinator, entry))
     entities.append(PostNordLastUpdateSensor(coordinator, entry))
 
     async_add_entities(entities)
@@ -305,6 +316,58 @@ class PostNordDeliveredParcelsSensor(
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the extra state attributes."""
         return {"parcels": self.coordinator.delivered}
+
+
+class PostNordOutgoingParcelsSensor(CoordinatorEntity, SensorEntity):
+    """Summary sensor for active outgoing account parcels."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "outgoing_parcels"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_attribution = ATTRIBUTION
+    _unrecorded_attributes = frozenset({"parcels"})
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        """Initialise the account-only outgoing summary."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_outgoing_parcels"
+        self._attr_device_info = build_device_info(entry)
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of active sender parcels."""
+        return len(getattr(self.coordinator, "outgoing_active", []))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return active sender parcels."""
+        return {"parcels": getattr(self.coordinator, "outgoing_active", [])}
+
+
+class PostNordOutgoingDeliveredParcelsSensor(CoordinatorEntity, SensorEntity):
+    """Summary sensor for delivered outgoing account parcels."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "outgoing_delivered_parcels"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_attribution = ATTRIBUTION
+    _unrecorded_attributes = frozenset({"parcels"})
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        """Initialise the delivered sender summary."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_outgoing_delivered_parcels"
+        self._attr_device_info = build_device_info(entry)
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of retained delivered sender parcels."""
+        return len(getattr(self.coordinator, "outgoing_delivered", []))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return delivered sender parcels."""
+        return {"parcels": getattr(self.coordinator, "outgoing_delivered", [])}
 
 
 class PostNordLastUpdateSensor(

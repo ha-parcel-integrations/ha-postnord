@@ -34,6 +34,11 @@ NEW_ISSUE_URL = (
 # return leg in flight, so ``returning``).
 OTHER_STATUS = "OTHER"
 
+# Event codes the PostNord app shows as "extended retention time": the pickup
+# point keeps the parcel longer, so it is still waiting to be collected,
+# whatever the event's own status says.
+EXTENDED_RETENTION_EVENT_CODES = frozenset({"45", "z2F"})
+
 STATUS_MAP: dict[str, ParcelStatus] = {
     "CREATED": ParcelStatus.REGISTERED,
     "INFORMED": ParcelStatus.REGISTERED,

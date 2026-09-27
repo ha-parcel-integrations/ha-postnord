@@ -135,7 +135,9 @@
       "parcel_registered": "En pakke blev registreret",
       "parcel_status_changed": "En pakkes status ændrede sig",
       "parcel_delivered": "En pakke blev leveret",
-      "parcel_delivery_time_changed": "En pakkes forventede leveringstid ændrede sig"
+      "parcel_delivery_time_changed": "En pakkes forventede leveringstid ændrede sig",
+      "outgoing_parcel_status_changed": "En pakke, du har sendt, har skiftet status",
+      "outgoing_parcel_delivered": "En pakke, du har sendt, er leveret"
     }
   },
   "entity": {
@@ -163,6 +165,14 @@
       },
       "delivered_parcels": {
         "name": "Leverede pakker",
+        "unit_of_measurement": "pakker"
+      },
+      "outgoing_parcels": {
+        "name": "Udgående pakker",
+        "unit_of_measurement": "pakker"
+      },
+      "outgoing_delivered_parcels": {
+        "name": "Udgående leverede pakker",
         "unit_of_measurement": "pakker"
       },
       "last_update": {

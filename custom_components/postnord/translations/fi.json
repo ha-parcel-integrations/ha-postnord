@@ -135,7 +135,9 @@
       "parcel_registered": "Paketti rekisteröitiin",
       "parcel_status_changed": "Paketin tila muuttui",
       "parcel_delivered": "Paketti toimitettiin",
-      "parcel_delivery_time_changed": "Paketin arvioitu toimitusaika muuttui"
+      "parcel_delivery_time_changed": "Paketin arvioitu toimitusaika muuttui",
+      "outgoing_parcel_status_changed": "Lähettämäsi paketin tila muuttui",
+      "outgoing_parcel_delivered": "Lähettämäsi paketti toimitettiin"
     }
   },
   "entity": {
@@ -163,6 +165,14 @@
       },
       "delivered_parcels": {
         "name": "Toimitetut paketit",
+        "unit_of_measurement": "pakettia"
+      },
+      "outgoing_parcels": {
+        "name": "Lähtevät paketit",
+        "unit_of_measurement": "pakettia"
+      },
+      "outgoing_delivered_parcels": {
+        "name": "Lähtevät toimitetut paketit",
         "unit_of_measurement": "pakettia"
       },
       "last_update": {

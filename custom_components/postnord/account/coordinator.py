@@ -2,8 +2,8 @@
 
 Exposes the same surface as the tracking coordinator — ``data`` is the active
 incoming parcels, ``delivered`` the retained delivered ones — so the sensor,
-calendar and diagnostics platforms need no source switch. PostNord's account
-list has no observed incoming/outgoing split, so every parcel is incoming.
+calendar and diagnostics platforms need no source switch. Parcels the account
+sent live apart in ``outgoing_active`` / ``outgoing_delivered``, as on bpost.
 """
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ from ..const import (
 )
 from ..events import (
     fire_incoming_change_events,
+    fire_outgoing_change_events,
     snapshot_delivery_times,
     snapshot_states,
 )
@@ -36,7 +37,7 @@ from .client import (
     PostNordAccountCompatibilityError,
     PostNordAccountReauthRequired,
 )
-from .parcels import normalize_account_parcel
+from .parcels import is_outgoing, normalize_account_parcel
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,9 +74,12 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         )
         self._client = client
         self.delivered: list[dict] = []
+        self.outgoing_active: list[dict] = []
+        self.outgoing_delivered: list[dict] = []
         # None on the first update deliberately suppresses historical events.
         self._known_state: dict[str, ParcelStatus] | None = None
         self._known_delivery_times: dict[str, tuple[str | None, str | None]] | None = None
+        self._known_outgoing_state: dict[str, ParcelStatus] | None = None
         self._cached_device_id: str | None = None
         # The inbox is one batched call, so no parcel is ever skipped.
         self._delivered_codes: set[str] = set()
@@ -116,19 +120,37 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         )
         # Parcels the user deleted in the app sit in ``deletedShipments``,
         # which is deliberately never read.
-        parcels = [
-            normalize_account_parcel(raw, include_history=include_history)
-            for raw in buckets["activeShipments"] + buckets["archivedShipments"]
-        ]
         # The same shipment can surface in both buckets while PostNord archives
         # it; keep the first, which is the active one.
-        unique: dict[str, dict] = {}
-        for parcel in parcels:
-            if parcel["barcode"] and parcel["barcode"] not in unique:
-                unique[parcel["barcode"]] = parcel
+        incoming: dict[str, dict] = {}
+        outgoing: dict[str, dict] = {}
+        for raw in buckets["activeShipments"] + buckets["archivedShipments"]:
+            parcel = normalize_account_parcel(raw, include_history=include_history)
+            target = outgoing if is_outgoing(raw) else incoming
+            if parcel["barcode"] and parcel["barcode"] not in target:
+                target[parcel["barcode"]] = parcel
 
-        active = [p for p in unique.values() if not p["delivered"]]
-        delivered = [p for p in unique.values() if p["delivered"]]
+        self.outgoing_active = sort_parcels_by_ts(
+            [p for p in outgoing.values() if not p["delivered"]], "planned_from"
+        )
+        self.outgoing_delivered = apply_delivered_filter(
+            sort_parcels_by_ts(
+                [p for p in outgoing.values() if p["delivered"]],
+                "delivered_at",
+                descending=True,
+            ),
+            self.config_entry,
+        )
+        fire_outgoing_change_events(
+            self.hass,
+            list(outgoing.values()),
+            self._known_outgoing_state,
+            self._device_id(),
+        )
+        self._known_outgoing_state = snapshot_states(list(outgoing.values()))
+
+        active = [p for p in incoming.values() if not p["delivered"]]
+        delivered = [p for p in incoming.values() if p["delivered"]]
         self.delivered = apply_delivered_filter(
             sort_parcels_by_ts(delivered, "delivered_at", descending=True),
             self.config_entry,

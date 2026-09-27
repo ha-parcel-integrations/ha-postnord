@@ -84,4 +84,10 @@ async def async_get_config_entry_diagnostics(
         },
         "incoming": async_redact_data(coordinator.data or [], TO_REDACT),
         "delivered": async_redact_data(coordinator.delivered or [], TO_REDACT),
+        "outgoing_active": async_redact_data(
+            getattr(coordinator, "outgoing_active", []), TO_REDACT
+        ),
+        "outgoing_delivered": async_redact_data(
+            getattr(coordinator, "outgoing_delivered", []), TO_REDACT
+        ),
     }

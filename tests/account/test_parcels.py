@@ -5,6 +5,7 @@ import pytest
 
 from custom_components.postnord.account.parcels import (
     account_barcode,
+    is_outgoing,
     normalize_account_parcel,
 )
 from custom_components.postnord.const import ParcelStatus
@@ -103,11 +104,12 @@ def test_captured_shape_raises_no_missing_field_warning(caplog):
 
 def test_unseen_direction_warns_once_and_stays_listed(caplog):
     raw = account_active()
-    raw["userData"]["direction"] = "OUTGOING"
+    raw["userData"]["direction"] = "SIDEWAYS"
     with caplog.at_level(logging.WARNING):
         normalize_account_parcel(raw)
         parcel = normalize_account_parcel(raw)
-    assert caplog.text.count("direction=OUTGOING") == 1
+    assert caplog.text.count("direction=SIDEWAYS") == 1
+    assert is_outgoing(raw) is False
     assert parcel["barcode"] == ACCOUNT_ACTIVE_CODE
 
 
@@ -236,3 +238,25 @@ def test_pickup_point_falls_back_to_where_the_parcel_waited():
     raw = captured_service_point_delivery()
     del raw["destinationDeliveryPoint"]
     assert normalize_account_parcel(raw)["pickup_point"] == "EXAMPLE SERVICE POINT"
+
+
+def test_only_outgoing_direction_is_outgoing(caplog):
+    raw = account_active()
+    assert is_outgoing(raw) is False
+    raw["userData"]["direction"] = "OUTGOING"
+    with caplog.at_level(logging.WARNING):
+        assert is_outgoing(raw) is True
+        normalize_account_parcel(raw)
+    assert "direction" not in caplog.text
+    del raw["userData"]
+    assert is_outgoing(raw) is False
+
+
+def test_extended_retention_event_is_still_awaiting_pickup():
+    """Codes 45 / z2F are the app's "extended retention time"."""
+    raw = account_active()
+    raw["items"][0]["events"].append(
+        event("OTHER", "2026-05-01T08:00:00Z", "Retention extended", "z2F")
+    )
+    history = normalize_account_parcel(raw, include_history=True)["history"]
+    assert history[-1]["status"] == ParcelStatus.AT_PICKUP_POINT

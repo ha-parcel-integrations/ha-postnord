@@ -88,6 +88,46 @@ def fire_incoming_change_events(
             )
 
 
+def fire_outgoing_change_events(
+    hass: HomeAssistant,
+    parcels: list[dict],
+    known_state: dict[str, ParcelStatus] | None,
+    device_id: str | None,
+) -> None:
+    """Fire the sender-side subset of the contract.
+
+    Outgoing parcels get only ``_outgoing_parcel_status_changed`` and
+    ``_outgoing_parcel_delivered``: a parcel you sent yourself is never news
+    when it first appears, and its ETA is the recipient's business.
+    """
+    if known_state is None:
+        return
+
+    for parcel in parcels:
+        barcode = parcel.get("barcode")
+        if not barcode or barcode not in known_state:
+            continue
+        old_status = known_state[barcode]
+        new_status = parcel["status"]
+        if new_status == old_status:
+            continue
+        if new_status == ParcelStatus.DELIVERED:
+            hass.bus.async_fire(
+                f"{DOMAIN}_outgoing_parcel_delivered",
+                {**parcel, "device_id": device_id},
+            )
+        else:
+            hass.bus.async_fire(
+                f"{DOMAIN}_outgoing_parcel_status_changed",
+                {
+                    **parcel,
+                    "device_id": device_id,
+                    "old_status": old_status,
+                    "new_status": new_status,
+                },
+            )
+
+
 def snapshot_states(parcels: list[dict]) -> dict[str, ParcelStatus]:
     """Return the barcode → status map the next cycle diffs against."""
     return {

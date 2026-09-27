@@ -30,6 +30,7 @@ from ..const import (
     ParcelStatus,
 )
 from ..status import (
+    EXTENDED_RETENTION_EVENT_CODES,
     NEW_ISSUE_URL,
     OTHER_STATUS,
     OUT_FOR_DELIVERY_EVENT_CODE,
@@ -105,6 +106,8 @@ def _event_status(event: dict) -> ParcelStatus | None:
     """Map one event to a canonical status, honouring the out-for-delivery code."""
     if str(event.get("eventCode")) == OUT_FOR_DELIVERY_EVENT_CODE:
         return ParcelStatus.OUT_FOR_DELIVERY
+    if str(event.get("eventCode")) in EXTENDED_RETENTION_EVENT_CODES:
+        return ParcelStatus.AT_PICKUP_POINT
     return map_event_status(event.get("status"))
 
 

@@ -132,3 +132,60 @@ async def test_compatibility_failure_warns_once_and_is_not_reauth(hass, caplog):
         with pytest.raises(UpdateFailed):
             await coordinator._async_update_data()
     assert caplog.text.count("app key this integration uses was changed") == 1
+
+
+
+def _outgoing(code, delivered=False):
+    raw = account_delivered(code) if delivered else account_active(code)
+    raw["userData"]["direction"] = "OUTGOING"
+    return raw
+
+
+async def test_outgoing_parcels_live_apart(hass):
+    coordinator = _coordinator(
+        hass,
+        tracking_body(
+            active=[account_active(), _outgoing("OUT1")],
+            archived=[account_delivered(), _outgoing("OUT2", delivered=True)],
+        ),
+    )
+    data = await coordinator._async_update_data()
+    assert [p["barcode"] for p in data] == [ACCOUNT_ACTIVE_CODE]
+    assert [p["barcode"] for p in coordinator.delivered] == [ACCOUNT_DELIVERED_CODE]
+    assert [p["barcode"] for p in coordinator.outgoing_active] == ["OUT1"]
+    assert [p["barcode"] for p in coordinator.outgoing_delivered] == ["OUT2"]
+
+
+async def test_outgoing_parcel_at_a_pickup_point_is_not_awaiting_pickup(hass):
+    waiting = _outgoing("OUT1")
+    waiting["status"] = "AVAILABLE_FOR_DELIVERY"
+    coordinator = _coordinator(hass, tracking_body(active=[waiting], archived=[]))
+    data = await coordinator._async_update_data()
+    assert data == []
+    assert coordinator.outgoing_active[0]["pickup"] is True
+
+
+async def test_outgoing_fires_only_the_sender_events(hass):
+    coordinator = _coordinator(hass, tracking_body(active=[], archived=[]))
+    await coordinator._async_update_data()
+    fired = []
+    for suffix in (
+        "parcel_registered",
+        "parcel_delivered",
+        "outgoing_parcel_status_changed",
+        "outgoing_parcel_delivered",
+    ):
+        hass.bus.async_listen(f"{DOMAIN}_{suffix}", fired.append)
+    # First sighting of an outgoing parcel is never news.
+    coordinator._client.async_get_tracking.return_value = {
+        "activeShipments": [_outgoing("OUT1")],
+        "archivedShipments": [],
+    }
+    await coordinator._async_update_data()
+    coordinator._client.async_get_tracking.return_value = {
+        "activeShipments": [],
+        "archivedShipments": [_outgoing("OUT1", delivered=True)],
+    }
+    await coordinator._async_update_data()
+    await hass.async_block_till_done()
+    assert [e.event_type for e in fired] == [f"{DOMAIN}_outgoing_parcel_delivered"]

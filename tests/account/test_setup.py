@@ -73,6 +73,9 @@ async def test_account_entry_loads_without_services(hass):
     incoming = hass.states.get(f"sensor.postnord_{EMAIL.replace('@', '_').replace('.', '_')}_incoming_parcels")
     assert incoming is not None
     assert incoming.state == "1"
+    prefix = f"sensor.postnord_{EMAIL.replace('@', '_').replace('.', '_')}"
+    assert hass.states.get(f"{prefix}_outgoing_parcels").state == "0"
+    assert hass.states.get(f"{prefix}_outgoing_delivered_parcels").state == "0"
 
     assert await hass.config_entries.async_unload(entry.entry_id)
 
