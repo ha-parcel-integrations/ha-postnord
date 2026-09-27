@@ -2,6 +2,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -95,8 +96,8 @@ async def test_events_fire_after_the_first_refresh(hass):
     coordinator = _coordinator(hass, tracking_body(active=[], archived=[]))
     await coordinator._async_update_data()
     fired = []
-    hass.bus.async_listen(f"{DOMAIN}_parcel_registered", fired.append)
-    hass.bus.async_listen(f"{DOMAIN}_parcel_delivered", fired.append)
+    hass.bus.async_listen(f"{DOMAIN}_parcel_registered", callback(lambda e: fired.append(e)))
+    hass.bus.async_listen(f"{DOMAIN}_parcel_delivered", callback(lambda e: fired.append(e)))
     coordinator._client.async_get_tracking.return_value = {
         "activeShipments": [account_active()],
         "archivedShipments": [],
@@ -175,7 +176,7 @@ async def test_outgoing_fires_only_the_sender_events(hass):
         "outgoing_parcel_status_changed",
         "outgoing_parcel_delivered",
     ):
-        hass.bus.async_listen(f"{DOMAIN}_{suffix}", fired.append)
+        hass.bus.async_listen(f"{DOMAIN}_{suffix}", callback(lambda e: fired.append(e)))
     # First sighting of an outgoing parcel is never news.
     coordinator._client.async_get_tracking.return_value = {
         "activeShipments": [_outgoing("OUT1")],

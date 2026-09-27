@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
+from homeassistant.core import callback
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.postnord.const import (
@@ -453,7 +454,7 @@ async def test_first_refresh_fires_nothing(hass):
         "parcel_delivered",
         "parcel_delivery_time_changed",
     ):
-        hass.bus.async_listen(f"{DOMAIN}_{suffix}", lambda e: fired.append(e))
+        hass.bus.async_listen(f"{DOMAIN}_{suffix}", callback(lambda e: fired.append(e)))
 
     await coordinator._async_update_data()
     await hass.async_block_till_done()
@@ -547,8 +548,8 @@ async def test_no_events_for_parcel_first_seen_delivered(hass):
     coordinator = PostNordCoordinator(hass, client, entry)
 
     fired = []
-    hass.bus.async_listen(f"{DOMAIN}_parcel_registered", lambda e: fired.append(e))
-    hass.bus.async_listen(f"{DOMAIN}_parcel_delivered", lambda e: fired.append(e))
+    hass.bus.async_listen(f"{DOMAIN}_parcel_registered", callback(lambda e: fired.append(e)))
+    hass.bus.async_listen(f"{DOMAIN}_parcel_delivered", callback(lambda e: fired.append(e)))
 
     await coordinator._async_update_data()  # first refresh seeds the state
 
