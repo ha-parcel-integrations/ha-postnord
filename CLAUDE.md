@@ -75,18 +75,6 @@ re-export shims kept so existing imports still resolve
   aliased to `Tracking` for the docs-site table. Both variants fill every
   optional field today; a test ties the Account set to what the normaliser
   fills.
-- **Event codes `45` / `z2F` are "extended retention time"** in the app, so
-  their history entry is `at_pickup_point` whatever the event's own status.
-- **History: an `OTHER` event keeps the previous status.** On events `OTHER`
-  is PostNord's notification / intermediate-scan code (`z3D`, `z82`, …), not
-  an unknown status, so `build_history` carries the prior canonical status over
-  it and `map_event_status` does not warn for it. A *shipment*-level `OTHER`
-  still maps to `unknown` + WARNING.
-- **A finished return is `delivered`** (`settle_return`): PostNord ends a
-  return leg with a `DELIVERED` event while the shipment keeps `RETURNED`. Seen
-  in a real account history 2026-09-27. Same rule as bpost; `raw_status` keeps
-  the return text. Without it an archived return sits among the active parcels
-  forever.
 - **The account coordinator exposes the tracking coordinator's surface**
   (`data` = active incoming, `delivered`, `delivered_codes`,
   `current_tier_minutes`, `last_success_time`), so sensors, calendar and
