@@ -8,10 +8,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import PostNordApiClient
 from .const import PLATFORMS
-from .coordinator import PostNordCoordinator
 from .services import async_setup_services, async_unload_services
+from .tracking.api import PostNordApiClient
+from .tracking.coordinator import PostNordCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 

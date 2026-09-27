@@ -5,12 +5,12 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.postnord.api import PostNordApiError
 from custom_components.postnord.const import (
     CONF_PARCELS,
     CONF_TRACKING_CODE,
     DOMAIN,
 )
+from custom_components.postnord.tracking.api import PostNordApiError
 
 from .payloads import ACTIVE_CODE
 from .payloads import active_sample as _sample
@@ -28,7 +28,7 @@ async def test_setup_and_unload(hass):
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.postnord.api.PostNordApiClient.async_get_parcel",
+        "custom_components.postnord.tracking.api.PostNordApiClient.async_get_parcel",
         new=AsyncMock(return_value=_sample()),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -68,7 +68,7 @@ async def test_setup_retries_when_first_refresh_fails(hass):
     entry.add_to_hass(hass)
 
     with patch(
-        "custom_components.postnord.api.PostNordApiClient.async_get_parcel",
+        "custom_components.postnord.tracking.api.PostNordApiClient.async_get_parcel",
         new=AsyncMock(side_effect=PostNordApiError("PostNord unreachable")),
     ):
         assert not await hass.config_entries.async_setup(entry.entry_id)
@@ -87,7 +87,7 @@ async def test_per_parcel_sensor_spawn_and_remove(hass):
     entry.add_to_hass(hass)
 
     mock = AsyncMock(return_value=_sample())
-    with patch("custom_components.postnord.api.PostNordApiClient.async_get_parcel", new=mock):
+    with patch("custom_components.postnord.tracking.api.PostNordApiClient.async_get_parcel", new=mock):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
@@ -124,7 +124,7 @@ async def test_options_update_applies_live_without_reload(hass):
     entry.add_to_hass(hass)
 
     mock = AsyncMock(return_value=_sample())
-    with patch("custom_components.postnord.api.PostNordApiClient.async_get_parcel", new=mock):
+    with patch("custom_components.postnord.tracking.api.PostNordApiClient.async_get_parcel", new=mock):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 

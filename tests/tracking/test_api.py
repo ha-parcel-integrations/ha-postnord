@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 import aiohttp
 import pytest
 
-from custom_components.postnord.api import PostNordApiClient, PostNordApiError
 from custom_components.postnord.const import TRACKING_BAP_KEY
+from custom_components.postnord.tracking.api import PostNordApiClient, PostNordApiError
 
 CODE = "00000000000000002"
 

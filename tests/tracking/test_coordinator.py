@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.postnord.api import PostNordApiError
 from custom_components.postnord.const import (
     CONF_DELIVERED_FILTER_AMOUNT,
     CONF_DELIVERED_FILTER_TYPE,
@@ -21,7 +20,8 @@ from custom_components.postnord.const import (
     STAGGER_MINUTES,
     ParcelStatus,
 )
-from custom_components.postnord.coordinator import (
+from custom_components.postnord.tracking.api import PostNordApiError
+from custom_components.postnord.tracking.coordinator import (
     PostNordCoordinator,
     _hottest_tier_minutes,
     _in_quiet_window,
@@ -30,7 +30,7 @@ from custom_components.postnord.coordinator import (
     _stagger_minutes,
 )
 
-from .payloads import ACTIVE_CODE, DELIVERED_CODE, active_sample, delivered_sample
+from ..payloads import ACTIVE_CODE, DELIVERED_CODE, active_sample, delivered_sample
 
 OTHER_CODE = "EXAMPLE888888"
 

@@ -17,7 +17,7 @@ from custom_components.postnord.const import (
     KNOWN_CAPABILITIES,
     ParcelStatus,
 )
-from custom_components.postnord.parcels import (
+from custom_components.postnord.tracking.parcels import (
     _shape_fields_logged,
     apply_delivered_filter,
     build_history,
@@ -31,7 +31,7 @@ from custom_components.postnord.parcels import (
     to_iso_timestamp,
 )
 
-from .payloads import active_sample, delivered_sample, event, pickup_sample
+from ..payloads import active_sample, delivered_sample, event, pickup_sample
 
 
 def _events(sample: dict) -> list[dict]:
