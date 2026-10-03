@@ -77,7 +77,7 @@ The form shows a login link. Log in to PostNord in a desktop browser with the de
 
 After that the integration renews its own access; your email and the rotating tokens are stored, nothing else. If PostNord stops accepting them, Home Assistant asks you to log in again the same way. Every parcel in the account is imported — there is no parcel list to manage, and each account is its own device. Parcels you deleted in the PostNord app are not shown.
 
-The account login uses the same service as the PostNord app, including the app's own access key. If PostNord changes that key, account entries stop updating (the log says so) until the integration is updated — logging in again will not help. Tracking-code hubs are not affected.
+The account login uses the same service as the PostNord app. If PostNord changes how that login works, account entries stop updating (the log says so) until the integration is updated — logging in again will not help. Tracking-code hubs are not affected.
 
 ## Options
 
@@ -205,7 +205,7 @@ logger:
 
 - **A parcel shows `unknown`** — PostNord has not scanned it yet (their API returns no shipment until the first scan), or the code is wrong. It will pick up automatically once scanned.
 - **The account asks to log in again** — PostNord no longer accepts the stored login. Repeat the [browser login](docs/finding-the-redirect-url.md) from the repair notification.
-- **The log says the app key was changed** — PostNord rotated the access key the account login relies on. Please [open an issue](https://github.com/ha-parcel-integrations/ha-postnord/issues/new); logging in again will not fix it.
+- **The log says PostNord changed its login** — the account login no longer works the way the integration expects. Please [open an issue](https://github.com/ha-parcel-integrations/ha-postnord/issues/new); logging in again will not fix it.
 - **A status logs "Unrecognised PostNord status"** — please [open an issue](https://github.com/ha-parcel-integrations/ha-postnord/issues/new) with the logged line so the mapping can be extended.
 
 ## Related integrations
