@@ -1,14 +1,22 @@
 """pytest configuration for the PostNord test suite."""
+
 import sys
 
 import pytest
 from pytest_homeassistant_custom_component.plugins import hass  # noqa: F401
 
+from custom_components.postnord import status
+from custom_components.postnord.account import (
+    coordinator as account_coordinator,
+    parcels as account_parcels,
+)
+from custom_components.postnord.tracking import api, parcels
+
 
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Make ``custom_components.postnord`` loadable from config-flow / setup tests."""
-    yield
+    return
 
 
 @pytest.fixture(autouse=True)
@@ -20,17 +28,11 @@ def reset_one_shot_warnings():
     makes them leak across tests, so whether a warning fires would otherwise
     depend on test order.
     """
-    from custom_components.postnord import status
-    from custom_components.postnord.account import coordinator as account_coordinator
-    from custom_components.postnord.account import parcels as account_parcels
-    from custom_components.postnord.tracking import api, parcels
-
     api._web_key_warned = False
     status._unmapped_statuses_logged.clear()
     account_parcels._warned_fields.clear()
     account_coordinator._compatibility_warned = False
     parcels._shape_fields_logged.clear()
-    yield
 
 
 if sys.platform == "win32":
@@ -50,7 +52,7 @@ if sys.platform == "win32":
     # HA's aiohttp helper hardcodes aiohttp's AsyncResolver, whose aiodns
     # backend refuses the Proactor loop the suite runs on under Windows.
     # Swap in the threaded resolver for the tests — no test resolves DNS.
-    import homeassistant.helpers.aiohttp_client as _ha_aiohttp_client
     from aiohttp.resolver import ThreadedResolver
+    import homeassistant.helpers.aiohttp_client as _ha_aiohttp_client
 
     _ha_aiohttp_client.AsyncResolver = ThreadedResolver

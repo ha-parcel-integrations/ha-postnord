@@ -6,6 +6,7 @@ redacted PostNord response captured 2026-07-30 — the ``recipientview`` and
 ``findByIdentifier`` endpoints share the same envelope. Kept in one module so a
 payload-shape fix has exactly one home.
 """
+
 from __future__ import annotations
 
 ACTIVE_CODE = "00000000000000001"
@@ -54,7 +55,9 @@ def delivered_sample(code: str = DELIVERED_CODE) -> dict:
                     event("DELIVERED", "2026-04-29T13:12:42Z", "Delivered", "40"),
                     event("DELIVERY", "2026-04-29T08:46:00Z", "Out for delivery", "30"),
                     event("EN_ROUTE", "2026-04-28T15:52:17Z", "At the terminal", "20"),
-                    event("INFORMED", "2026-04-27T23:03:58Z", "Shipment announced", "68"),
+                    event(
+                        "INFORMED", "2026-04-27T23:03:58Z", "Shipment announced", "68"
+                    ),
                 ],
             }
         ],

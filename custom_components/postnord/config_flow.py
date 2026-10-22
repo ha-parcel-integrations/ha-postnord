@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import logging
 import re
-from collections.abc import Mapping
 from typing import Any
 
-import voluptuous as vol
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -17,6 +16,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import voluptuous as vol
 
 from .account.client import (
     PostNordAccountApiError,
@@ -198,9 +198,7 @@ class PostNordConfigFlow(ConfigFlow, domain=DOMAIN):
             "docs_url": ACCOUNT_REDIRECT_DOCS_URL,
         }
 
-    async def _async_login(
-        self, pasted: str
-    ) -> tuple[str, dict[str, str]] | str:
+    async def _async_login(self, pasted: str) -> tuple[str, dict[str, str]] | str:
         """Exchange the pasted redirect; return (email, tokens) or an error key."""
         if self._login is None:
             self._login = PostNordLogin()

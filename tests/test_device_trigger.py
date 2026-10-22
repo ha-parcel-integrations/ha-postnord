@@ -1,4 +1,5 @@
 """Tests for PostNord device triggers."""
+
 from unittest.mock import AsyncMock
 
 from custom_components.postnord.const import DOMAIN

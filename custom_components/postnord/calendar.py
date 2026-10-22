@@ -1,4 +1,5 @@
 """Calendar platform for the PostNord parcel tracker integration."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -20,17 +21,20 @@ PARALLEL_UPDATES = 0
 _DEFAULT_EVENT_DURATION = timedelta(hours=1)
 
 
-
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: PostNordConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the PostNord deliveries calendar from a config entry."""
-    async_add_entities([PostNordDeliveriesCalendar(entry.runtime_data.coordinator, entry)])
+    async_add_entities(
+        [PostNordDeliveriesCalendar(entry.runtime_data.coordinator, entry)]
+    )
 
 
-class PostNordDeliveriesCalendar(CoordinatorEntity[PostNordCoordinator], CalendarEntity):
+class PostNordDeliveriesCalendar(
+    CoordinatorEntity[PostNordCoordinator], CalendarEntity
+):
     """A read-only calendar of expected PostNord deliveries.
 
     Each active tracked parcel with a known delivery moment becomes an event.

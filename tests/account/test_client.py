@@ -1,8 +1,9 @@
 """Tests for the PostNord account client and the pasted-redirect login."""
+
 from urllib.parse import parse_qs, urlparse
 
-import pytest
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import pytest
 
 from custom_components.postnord.account.client import (
     PostNordAccountApiError,
@@ -121,7 +122,7 @@ async def test_exchange_unparseable_token_body(hass, aioclient_mock):
         await login.async_exchange(async_get_clientsession(hass), _redirect(login))
 
 
-def _client(hass, callback=None, refresh_token="refresh-1"):
+def _client(hass, callback=None, refresh_token="refresh-1"):  # noqa: S107 - test fixture value
     return PostNordAccountClient(
         async_get_clientsession(hass),
         access_token="access-1",
@@ -180,7 +181,8 @@ async def test_401_refreshes_once_and_persists_rotated_tokens(hass, aioclient_mo
 
     aioclient_mock.get(ACCOUNT_TRACKING_URL, status=401)
     aioclient_mock.post(
-        ACCOUNT_TOKEN_URL, json={"access_token": "access-2", "refresh_token": "refresh-2"}
+        ACCOUNT_TOKEN_URL,
+        json={"access_token": "access-2", "refresh_token": "refresh-2"},
     )
     client = _client(hass, callback)
     # The mocked GET keeps answering 401, so swap it for a 200 after refresh.

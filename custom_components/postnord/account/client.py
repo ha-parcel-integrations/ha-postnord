@@ -4,13 +4,14 @@ Deliberately isolated from the public tracking client: it uses a user-owned
 token pair and the app's revocable gateway key. Responses are returned as raw
 dictionaries; normalisation belongs in ``parcels.py``.
 """
+
 from __future__ import annotations
 
 import base64
-import hashlib
-import secrets
 from collections.abc import Awaitable, Callable
+import hashlib
 from http import HTTPStatus
+import secrets
 from typing import Any
 from urllib.parse import parse_qs, quote, unquote, urlencode, urlparse
 
@@ -70,7 +71,7 @@ def parse_redirect_url(value: str) -> tuple[str | None, str | None]:
     """
     text = (value or "").strip().strip("\"'")
     if text.lower().startswith("location:"):
-        text = text[len("location:"):].strip().strip("\"'")
+        text = text[len("location:") :].strip().strip("\"'")
     params = parse_qs(urlparse(text).query)
     code = params.get("code", [None])[0]
     state = params.get("state", [None])[0]

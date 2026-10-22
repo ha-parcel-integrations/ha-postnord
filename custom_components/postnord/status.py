@@ -4,6 +4,7 @@ The tracker (``recipientview``) and the account inbox report the same machine
 ``status`` enum, so the map lives one level up and neither source can drift
 from it. Normalisation is *not* shared — each source shapes its own payload.
 """
+
 from __future__ import annotations
 
 import logging

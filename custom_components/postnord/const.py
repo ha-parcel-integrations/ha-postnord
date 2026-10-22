@@ -1,4 +1,5 @@
 """Constants for the PostNord parcel tracker integration."""
+
 from enum import StrEnum
 
 from homeassistant.const import Platform
@@ -16,14 +17,14 @@ class ParcelStatus(StrEnum):
     roughly the order a parcel moves through.
     """
 
-    REGISTERED = "registered"               # Sender announced the parcel; not handed over yet
-    IN_TRANSIT = "in_transit"               # In the carrier's network
-    OUT_FOR_DELIVERY = "out_for_delivery"   # On a delivery vehicle today
-    AT_PICKUP_POINT = "at_pickup_point"     # Ready to collect at a pickup location
-    DELIVERED = "delivered"                 # Handed over
-    RETURNING = "returning"                 # Failed delivery, going back to sender
-    PROBLEM = "problem"                     # Carrier reports an exception/issue
-    UNKNOWN = "unknown"                     # Raw status we have not mapped yet
+    REGISTERED = "registered"  # Sender announced the parcel; not handed over yet
+    IN_TRANSIT = "in_transit"  # In the carrier's network
+    OUT_FOR_DELIVERY = "out_for_delivery"  # On a delivery vehicle today
+    AT_PICKUP_POINT = "at_pickup_point"  # Ready to collect at a pickup location
+    DELIVERED = "delivered"  # Handed over
+    RETURNING = "returning"  # Failed delivery, going back to sender
+    PROBLEM = "problem"  # Carrier reports an exception/issue
+    UNKNOWN = "unknown"  # Raw status we have not mapped yet
 
 
 PLATFORMS = [Platform.BUTTON, Platform.CALENDAR, Platform.SENSOR]
@@ -120,9 +121,7 @@ ACCOUNT_SCOPES = (
     "https://api.postnord.com/scopes/eta/livetracking",
     "https://api.postnord.com/scopes/preferences/recipient",
 )
-ACCOUNT_TRACKING_URL = (
-    "https://api2.postnord.com/rest/customer/v2/receiverapp/tracking"
-)
+ACCOUNT_TRACKING_URL = "https://api2.postnord.com/rest/customer/v2/receiverapp/tracking"
 # The receiver app's gateway subscription key and context header. Shared app
 # material, not a user secret: it can be rotated by PostNord independently of
 # any login, so a rejection is a compatibility failure, never a reauth prompt.

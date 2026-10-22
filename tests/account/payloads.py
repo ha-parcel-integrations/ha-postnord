@@ -5,9 +5,10 @@ Shaped after ``jesmak/postnord_tracking``'s reading of the receiver-app
 public tracker returns. **Synthetic, not captured**: replace with a scrubbed
 real account response once one is available.
 """
+
 from __future__ import annotations
 
-from ..payloads import delivered_sample, event
+from tests.payloads import delivered_sample, event
 
 ACCOUNT_ACTIVE_CODE = "00000000000000011"
 ACCOUNT_DELIVERED_CODE = "00000000000000012"
@@ -57,22 +58,51 @@ def captured_service_point_delivery() -> dict:
     point = "EXAMPLE SERVICE POINT"
 
     def ev(code_, time, desc, status, loc=None):
-        e = {"eventCode": code_, "eventDescription": desc, "eventTime": time, "status": status}
+        e = {
+            "eventCode": code_,
+            "eventDescription": desc,
+            "eventTime": time,
+            "status": status,
+        }
         if loc is not None:
             e["location"] = loc
         return e
 
-    hub = {"countryCode": "SE", "locationId": "175", "locationName": "EXAMPLE PAKETTERMINAL", "locationType": "HUB"}
-    route = {"countryCode": "SE", "locationId": "1000001", "locationName": "Example City", "locationType": "SLINGA"}
-    sp = {"countryCode": "SE", "locationId": "200001", "locationName": point, "locationType": "SERVICE_POINT"}
+    hub = {
+        "countryCode": "SE",
+        "locationId": "175",
+        "locationName": "EXAMPLE PAKETTERMINAL",
+        "locationType": "HUB",
+    }
+    route = {
+        "countryCode": "SE",
+        "locationId": "1000001",
+        "locationName": "Example City",
+        "locationType": "SLINGA",
+    }
+    sp = {
+        "countryCode": "SE",
+        "locationId": "200001",
+        "locationName": point,
+        "locationType": "SERVICE_POINT",
+    }
     transport = "The shipment item is under transportation."
     return {
         "additionalServices": [{"code": "77", "name": "Optional Service Point"}],
         "archivedStatus": "ARCHIVED",
-        "consignee": {"address": {"city": "EXAMPLE CITY", "countryCode": "SE", "postCode": "11111"}},
+        "consignee": {
+            "address": {
+                "city": "EXAMPLE CITY",
+                "countryCode": "SE",
+                "postCode": "11111",
+            }
+        },
         "consigneeEmailExists": True,
         "consigneePhoneNumberExists": True,
-        "consignor": {"address": {"countryCode": "SE", "postCode": "22222"}, "name": "Example Shop"},
+        "consignor": {
+            "address": {"countryCode": "SE", "postCode": "22222"},
+            "name": "Example Shop",
+        },
         "deliveryDate": "2026-09-23T14:27:00Z",
         "destinationDeliveryPoint": {"name": point},
         "items": [
@@ -87,16 +117,52 @@ def captured_service_point_delivery() -> dict:
                 },
                 "environmentalInfo": {"swanEco": True},
                 "events": [
-                    ev("68", "2026-09-21T11:44:07Z", "We have received a notification from your shipper that they are preparing an item for you.", "INFORMED", {"locationName": "PostNord"}),
+                    ev(
+                        "68",
+                        "2026-09-21T11:44:07Z",
+                        "We have received a notification from your shipper that they are preparing an item for you.",
+                        "INFORMED",
+                        {"locationName": "PostNord"},
+                    ),
                     ev("31", "2026-09-21T16:32:00Z", transport, "EN_ROUTE", hub),
                     ev("z3D", "2026-09-21T18:40:00Z", transport, "OTHER", hub),
                     ev("z6O", "2026-09-22T03:17:01Z", transport, "OTHER", hub),
                     ev("355", "2026-09-23T00:06:00Z", transport, "EN_ROUTE", hub),
-                    ev("z114", "2026-09-23T05:00:09Z", "The shipment item has arrived at the distribution terminal.", "EN_ROUTE", route),
-                    ev("113", "2026-09-23T05:00:10Z", "The delivery of the shipment item is in progress.", "EN_ROUTE", route),
-                    ev("1", "2026-09-23T07:34:00Z", "The shipment item has been delivered to a service point.", "AVAILABLE_FOR_DELIVERY", sp),
-                    ev("z82", "2026-09-23T07:35:26Z", "A text message notification has been sent to the recipient.", "OTHER", {"countryCode": "SE", "locationId": "3", "locationType": "HUB"}),
-                    ev("21", "2026-09-23T14:27:00Z", "The shipment item has been delivered.", "DELIVERED", sp),
+                    ev(
+                        "z114",
+                        "2026-09-23T05:00:09Z",
+                        "The shipment item has arrived at the distribution terminal.",
+                        "EN_ROUTE",
+                        route,
+                    ),
+                    ev(
+                        "113",
+                        "2026-09-23T05:00:10Z",
+                        "The delivery of the shipment item is in progress.",
+                        "EN_ROUTE",
+                        route,
+                    ),
+                    ev(
+                        "1",
+                        "2026-09-23T07:34:00Z",
+                        "The shipment item has been delivered to a service point.",
+                        "AVAILABLE_FOR_DELIVERY",
+                        sp,
+                    ),
+                    ev(
+                        "z82",
+                        "2026-09-23T07:35:26Z",
+                        "A text message notification has been sent to the recipient.",
+                        "OTHER",
+                        {"countryCode": "SE", "locationId": "3", "locationType": "HUB"},
+                    ),
+                    ev(
+                        "21",
+                        "2026-09-23T14:27:00Z",
+                        "The shipment item has been delivered.",
+                        "DELIVERED",
+                        sp,
+                    ),
                 ],
                 "itemId": code,
                 "returnDate": "2026-09-30T10:00:00Z",
@@ -105,7 +171,10 @@ def captured_service_point_delivery() -> dict:
                     "body": "The shipment item was delivered on 9/23/2026 at 2:27 PM",
                     "header": "The shipment item has been delivered to the recipient",
                 },
-                "userData": {"hasSubmittedExperienceFeedback": False, "manuallyMarkedAsDelivered": False},
+                "userData": {
+                    "hasSubmittedExperienceFeedback": False,
+                    "manuallyMarkedAsDelivered": False,
+                },
                 "weight": {"unit": "kg", "value": "0.2"},
             }
         ],

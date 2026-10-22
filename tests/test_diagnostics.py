@@ -1,9 +1,8 @@
 """Tests for PostNord diagnostics."""
+
 from unittest.mock import MagicMock
 
-from custom_components.postnord.diagnostics import (
-    async_get_config_entry_diagnostics,
-)
+from custom_components.postnord.diagnostics import async_get_config_entry_diagnostics
 
 
 async def test_diagnostics_redacts_and_counts(hass):

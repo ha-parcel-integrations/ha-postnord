@@ -1,8 +1,9 @@
 """PostNord parcel tracker custom component for Home Assistant."""
+
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
+import logging
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -41,6 +42,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PostNordConfigEntry) -> 
     """Set up PostNord from a config entry."""
     is_account = entry.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_ACCOUNT
     if is_account:
+
         async def async_store_tokens(tokens: dict[str, str]) -> None:
             hass.config_entries.async_update_entry(
                 entry,
@@ -109,6 +111,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: PostNordConfigEntry) ->
         and other.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_TRACKING
         for other in hass.config_entries.async_entries(DOMAIN)
     )
-    if entry.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_TRACKING and not others_loaded:
+    if (
+        entry.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_TRACKING
+        and not others_loaded
+    ):
         async_unload_services(hass)
     return True

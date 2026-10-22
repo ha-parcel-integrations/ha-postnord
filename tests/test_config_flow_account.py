@@ -1,4 +1,5 @@
 """Tests for the account source's config flow: paste login and reauth."""
+
 from urllib.parse import parse_qs, urlparse
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -26,7 +27,9 @@ def _state(result) -> str:
 
 
 def _redirect(result, code="the-code") -> dict:
-    return {CONF_REDIRECT_URL: f"{ACCOUNT_REDIRECT_URI}?code={code}&state={_state(result)}"}
+    return {
+        CONF_REDIRECT_URL: f"{ACCOUNT_REDIRECT_URI}?code={code}&state={_state(result)}"
+    }
 
 
 async def _account_step(hass):
@@ -48,7 +51,9 @@ async def test_account_step_shows_the_login_link(hass):
     assert result["type"] == "form"
     assert result["step_id"] == SOURCE_ACCOUNT
     placeholders = result["description_placeholders"]
-    assert placeholders["authorize_url"].startswith("https://account.postnord.com/auth?")
+    assert placeholders["authorize_url"].startswith(
+        "https://account.postnord.com/auth?"
+    )
     assert placeholders["docs_url"].endswith("finding-the-redirect-url.md")
 
 

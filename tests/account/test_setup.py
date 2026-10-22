@@ -1,4 +1,5 @@
 """Setting up an account entry, alone and beside the tracking hub."""
+
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
@@ -16,12 +17,14 @@ from custom_components.postnord.const import (
     SOURCE_ACCOUNT,
 )
 from custom_components.postnord.diagnostics import async_get_config_entry_diagnostics
+from tests.payloads import active_sample
 
-from ..payloads import active_sample
 from .payloads import captured_service_point_delivery, tracking_body
 
 EMAIL = "someone@example.com"
-_TRACKING = "custom_components.postnord.account.client.PostNordAccountClient.async_get_tracking"
+_TRACKING = (
+    "custom_components.postnord.account.client.PostNordAccountClient.async_get_tracking"
+)
 
 
 def _buckets():
@@ -68,9 +71,13 @@ async def test_account_entry_loads_without_services(hass):
     assert entry.state is ConfigEntryState.LOADED
     assert not hass.services.has_service(DOMAIN, "track_parcel")
 
-    device = next(iter(dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)))
+    device = next(
+        iter(dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id))
+    )
     assert device.name == f"PostNord ({EMAIL})"
-    incoming = hass.states.get(f"sensor.postnord_{EMAIL.replace('@', '_').replace('.', '_')}_incoming_parcels")
+    incoming = hass.states.get(
+        f"sensor.postnord_{EMAIL.replace('@', '_').replace('.', '_')}_incoming_parcels"
+    )
     assert incoming is not None
     assert incoming.state == "1"
     prefix = f"sensor.postnord_{EMAIL.replace('@', '_').replace('.', '_')}"
@@ -82,7 +89,9 @@ async def test_account_entry_loads_without_services(hass):
 
 async def test_refused_login_at_setup_starts_reauth(hass):
     entry = _account(hass)
-    with patch(_TRACKING, new=AsyncMock(side_effect=PostNordAccountReauthRequired("x"))):
+    with patch(
+        _TRACKING, new=AsyncMock(side_effect=PostNordAccountReauthRequired("x"))
+    ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.SETUP_ERROR
@@ -144,7 +153,14 @@ async def test_diagnostics_never_carry_credentials_or_pii(hass):
     assert await _setup(hass, entry)
     result = await async_get_config_entry_diagnostics(hass, entry)
     dumped = repr(result)
-    for secret in ("access-1", "refresh-1", EMAIL, "Jane Doe", "Stockholm", "Example Shop"):
+    for secret in (
+        "access-1",
+        "refresh-1",
+        EMAIL,
+        "Jane Doe",
+        "Stockholm",
+        "Example Shop",
+    ):
         assert secret not in dumped
     assert "1ecf161be47543b19fce03f953a6e8d2" not in dumped
     assert result["entry_data"][CONF_SOURCE] == SOURCE_ACCOUNT
@@ -155,7 +171,9 @@ async def test_diagnostics_redact_the_captured_account_shape(hass):
     """Every private detail of a real account shipment is marked redacted."""
     entry = _account(hass)
     raw = captured_service_point_delivery()
-    assert await _setup(hass, entry, {"activeShipments": [], "archivedShipments": [raw]})
+    assert await _setup(
+        hass, entry, {"activeShipments": [], "archivedShipments": [raw]}
+    )
     entry.runtime_data.coordinator.delivered = [
         __import__(
             "custom_components.postnord.account.parcels", fromlist=["x"]

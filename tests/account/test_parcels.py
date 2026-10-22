@@ -1,4 +1,5 @@
 """Tests for the PostNord account normaliser."""
+
 import logging
 
 import pytest
@@ -8,11 +9,15 @@ from custom_components.postnord.account.parcels import (
     is_outgoing,
     normalize_account_parcel,
 )
-from custom_components.postnord.const import ParcelStatus
+from custom_components.postnord.const import (
+    CAPABILITIES_BY_VARIANT,
+    KNOWN_CAPABILITIES,
+    ParcelStatus,
+)
 from custom_components.postnord.status import map_parcel_status
+from tests.payloads import event
+from tests.tracking.test_parcels import CANONICAL_KEYS
 
-from ..payloads import event
-from ..tracking.test_parcels import CANONICAL_KEYS
 from .payloads import (
     ACCOUNT_ACTIVE_CODE,
     account_active,
@@ -72,7 +77,9 @@ def test_captured_service_point_delivery():
     raw = captured_service_point_delivery()
     parcel = normalize_account_parcel(raw, include_history=True)
     assert parcel["status"] == ParcelStatus.DELIVERED
-    assert parcel["raw_status"] == "The shipment item has been delivered to the recipient"
+    assert (
+        parcel["raw_status"] == "The shipment item has been delivered to the recipient"
+    )
     assert parcel["delivered_at"] == "2026-09-23T14:27:00Z"
     assert parcel["sender"] == "Example Shop"
     assert parcel["receiver"] is None
@@ -80,7 +87,10 @@ def test_captured_service_point_delivery():
     assert parcel["pickup"] is False
     assert parcel["weight"] == 0.2
     assert parcel["dimensions"] == {
-        "length": 28.0, "width": 20.0, "height": 2.0, "text": "28 x 20 x 2 cm",
+        "length": 28.0,
+        "width": 20.0,
+        "height": 2.0,
+        "text": "28 x 20 x 2 cm",
     }
     assert [e["status"] for e in parcel["history"]][-4:] == [
         ParcelStatus.OUT_FOR_DELIVERY,
@@ -186,11 +196,6 @@ def test_account_literals_are_in_the_shared_map(code, expected):
 
 def test_account_capabilities_match_what_the_normaliser_fills():
     """The docs-site table must not claim a field this source leaves None."""
-    from custom_components.postnord.const import (
-        CAPABILITIES_BY_VARIANT,
-        KNOWN_CAPABILITIES,
-    )
-
     claimed = CAPABILITIES_BY_VARIANT["Account"]
     assert claimed <= KNOWN_CAPABILITIES
     delivered = normalize_account_parcel(
@@ -216,7 +221,12 @@ def test_finished_return_is_delivered_and_keeps_its_text():
     raw["statusText"] = {"header": "Returned to sender"}
     raw["items"][0]["events"] += [
         event("RETURNED", "2026-05-07T04:42:01Z", "Returned to the sender"),
-        event("DELIVERED", "2026-05-13T20:55:00Z", "Delivered with Power Of Attorney", "21"),
+        event(
+            "DELIVERED",
+            "2026-05-13T20:55:00Z",
+            "Delivered with Power Of Attorney",
+            "21",
+        ),
     ]
     parcel = normalize_account_parcel(raw)
     assert parcel["status"] == ParcelStatus.DELIVERED

@@ -1,8 +1,9 @@
 """Sensor platform for the PostNord parcel tracker integration."""
+
 from __future__ import annotations
 
-import logging
 from datetime import datetime
+import logging
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -18,13 +19,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PostNordConfigEntry
-from .const import (
-    CONF_SOURCE,
-    DOMAIN,
-    SOURCE_ACCOUNT,
-    SOURCE_TRACKING,
-    ParcelStatus,
-)
+from .const import CONF_SOURCE, DOMAIN, SOURCE_ACCOUNT, SOURCE_TRACKING, ParcelStatus
 from .device import ATTRIBUTION, build_device_info
 from .tracking.coordinator import PostNordCoordinator
 from .tracking.parcels import parse_iso
@@ -34,7 +29,6 @@ _LOGGER = logging.getLogger(__name__)
 # The DataUpdateCoordinator handles fan-out to all entities; HA's per-entity
 # update throttling adds nothing here.
 PARALLEL_UPDATES = 0
-
 
 
 async def async_setup_entry(
@@ -48,9 +42,7 @@ async def async_setup_entry(
     # than (too late) from this forwarded platform.
     coordinator = entry.runtime_data.coordinator
 
-    current_barcodes: set[str] = {
-        p.get("barcode", "") for p in coordinator.data or []
-    }
+    current_barcodes: set[str] = {p.get("barcode", "") for p in coordinator.data or []}
     entry_id = entry.entry_id
 
     # Remove per-parcel sensors from the registry whose barcode is no longer
@@ -73,7 +65,7 @@ async def async_setup_entry(
             and entity_entry.unique_id.startswith(f"{entry_id}_")
             and entity_entry.unique_id not in non_parcel_unique_ids
         ):
-            barcode = entity_entry.unique_id[len(f"{entry_id}_"):]
+            barcode = entity_entry.unique_id[len(f"{entry_id}_") :]
             if barcode not in current_barcodes:
                 registry.async_remove(entity_entry.entity_id)
 
@@ -83,10 +75,10 @@ async def async_setup_entry(
         ),
         PostNordAwaitingPickupSensor(coordinator, entry),
     ]
-    for parcel in coordinator.data or []:
-        entities.append(
-            PostNordParcelSensor(coordinator, entry, parcel.get("barcode", ""))
-        )
+    entities.extend(
+        PostNordParcelSensor(coordinator, entry, parcel.get("barcode", ""))
+        for parcel in coordinator.data or []
+    )
     entities.append(PostNordNextDeliverySensor(coordinator, entry))
     entities.append(PostNordDeliveredParcelsSensor(coordinator, entry))
     if entry.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_ACCOUNT:
@@ -237,9 +229,7 @@ class PostNordParcelSensor(CoordinatorEntity[PostNordCoordinator], SensorEntity)
         return dict(parcel) if parcel else {}
 
 
-class PostNordNextDeliverySensor(
-    CoordinatorEntity[PostNordCoordinator], SensorEntity
-):
+class PostNordNextDeliverySensor(CoordinatorEntity[PostNordCoordinator], SensorEntity):
     """Earliest expected delivery datetime across all active parcels."""
 
     _attr_has_entity_name = True
@@ -247,9 +237,7 @@ class PostNordNextDeliverySensor(
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_attribution = ATTRIBUTION
 
-    def __init__(
-        self, coordinator: PostNordCoordinator, entry: ConfigEntry
-    ) -> None:
+    def __init__(self, coordinator: PostNordCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_next_delivery"
@@ -299,9 +287,7 @@ class PostNordDeliveredParcelsSensor(
     _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset({"parcels"})
 
-    def __init__(
-        self, coordinator: PostNordCoordinator, entry: ConfigEntry
-    ) -> None:
+    def __init__(self, coordinator: PostNordCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_delivered_parcels"
@@ -370,9 +356,7 @@ class PostNordOutgoingDeliveredParcelsSensor(CoordinatorEntity, SensorEntity):
         return {"parcels": getattr(self.coordinator, "outgoing_delivered", [])}
 
 
-class PostNordLastUpdateSensor(
-    CoordinatorEntity[PostNordCoordinator], SensorEntity
-):
+class PostNordLastUpdateSensor(CoordinatorEntity[PostNordCoordinator], SensorEntity):
     """Diagnostic sensor reporting when PostNord was last polled successfully."""
 
     _attr_has_entity_name = True
@@ -381,9 +365,7 @@ class PostNordLastUpdateSensor(
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_attribution = ATTRIBUTION
 
-    def __init__(
-        self, coordinator: PostNordCoordinator, entry: ConfigEntry
-    ) -> None:
+    def __init__(self, coordinator: PostNordCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_last_update"

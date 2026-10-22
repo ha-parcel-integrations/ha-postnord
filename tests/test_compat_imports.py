@@ -5,10 +5,13 @@ shims when the sources were split into `tracking/` and `account/`. Nothing in
 this repo imports them any more, so only a test notices if a rename quietly
 breaks a user's automation or an external import.
 """
+
 from custom_components.postnord import api, coordinator, parcels
-from custom_components.postnord.tracking import api as tracking_api
-from custom_components.postnord.tracking import coordinator as tracking_coordinator
-from custom_components.postnord.tracking import parcels as tracking_parcels
+from custom_components.postnord.tracking import (
+    api as tracking_api,
+    coordinator as tracking_coordinator,
+    parcels as tracking_parcels,
+)
 
 
 def test_root_coordinator_module_re_exports_the_tracking_coordinator():

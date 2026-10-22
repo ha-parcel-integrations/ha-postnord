@@ -1,10 +1,11 @@
 """Tests for the PostNord account coordinator."""
+
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import UpdateFailed
+import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.postnord.account.client import (
@@ -36,7 +37,10 @@ def _coordinator(hass, body=None, side_effect=None):
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_SOURCE: SOURCE_ACCOUNT},
-        options={CONF_DELIVERED_FILTER_TYPE: "parcels", CONF_DELIVERED_FILTER_AMOUNT: 7},
+        options={
+            CONF_DELIVERED_FILTER_TYPE: "parcels",
+            CONF_DELIVERED_FILTER_AMOUNT: 7,
+        },
     )
     entry.add_to_hass(hass)
     client = MagicMock()
@@ -96,8 +100,12 @@ async def test_events_fire_after_the_first_refresh(hass):
     coordinator = _coordinator(hass, tracking_body(active=[], archived=[]))
     await coordinator._async_update_data()
     fired = []
-    hass.bus.async_listen(f"{DOMAIN}_parcel_registered", callback(lambda e: fired.append(e)))
-    hass.bus.async_listen(f"{DOMAIN}_parcel_delivered", callback(lambda e: fired.append(e)))
+    hass.bus.async_listen(
+        f"{DOMAIN}_parcel_registered", callback(lambda e: fired.append(e))
+    )
+    hass.bus.async_listen(
+        f"{DOMAIN}_parcel_delivered", callback(lambda e: fired.append(e))
+    )
     coordinator._client.async_get_tracking.return_value = {
         "activeShipments": [account_active()],
         "archivedShipments": [],
@@ -133,7 +141,6 @@ async def test_compatibility_failure_warns_once_and_is_not_reauth(hass, caplog):
         with pytest.raises(UpdateFailed):
             await coordinator._async_update_data()
     assert caplog.text.count("app key this integration uses was changed") == 1
-
 
 
 def _outgoing(code, delivered=False):

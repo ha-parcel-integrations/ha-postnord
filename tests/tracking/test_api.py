@@ -1,4 +1,5 @@
 """Tests for the PostNord API client."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock
 

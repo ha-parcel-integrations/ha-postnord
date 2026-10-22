@@ -5,10 +5,11 @@ incoming parcels, ``delivered`` the retained delivered ones — so the sensor,
 calendar and diagnostics platforms need no source switch. Parcels the account
 sent live apart in ``outgoing_active`` / ``outgoing_delivered``, as on bpost.
 """
+
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 import logging
-from datetime import datetime, timedelta, timezone
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -46,7 +47,7 @@ _compatibility_warned = False
 
 def _warn_compatibility() -> None:
     """Warn once when PostNord stops accepting the app's gateway key."""
-    global _compatibility_warned
+    global _compatibility_warned  # noqa: PLW0603 - one-shot flag, reset by tests
     if _compatibility_warned:
         return
     _compatibility_warned = True
@@ -78,7 +79,9 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         self.outgoing_delivered: list[dict] = []
         # None on the first update deliberately suppresses historical events.
         self._known_state: dict[str, ParcelStatus] | None = None
-        self._known_delivery_times: dict[str, tuple[str | None, str | None]] | None = None
+        self._known_delivery_times: dict[str, tuple[str | None, str | None]] | None = (
+            None
+        )
         self._known_outgoing_state: dict[str, ParcelStatus] | None = None
         self._cached_device_id: str | None = None
         # The inbox is one batched call, so no parcel is ever skipped.
@@ -97,7 +100,9 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
             return self._cached_device_id
         registry = dr.async_get(self.hass)
         device = next(
-            iter(dr.async_entries_for_config_entry(registry, self.config_entry.entry_id)),
+            iter(
+                dr.async_entries_for_config_entry(registry, self.config_entry.entry_id)
+            ),
             None,
         )
         if device is not None:
@@ -170,5 +175,5 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         self._known_state = snapshot_states(seen)
         self._known_delivery_times = snapshot_delivery_times(seen)
 
-        self.last_success_time = datetime.now(timezone.utc)
+        self.last_success_time = datetime.now(UTC)
         return normalized_active

@@ -12,6 +12,7 @@ and the pickup point is ``destinationDeliveryPoint.name``. The ETA is read from
 the tracker's ``estimatedTimeOfArrival`` key; no active account parcel has
 confirmed it yet.
 """
+
 from __future__ import annotations
 
 import logging
@@ -127,8 +128,12 @@ def normalize_account_parcel(raw: dict, *, include_history: bool = False) -> dic
     return {
         "carrier": "PostNord",
         "barcode": barcode,
-        "sender": (consignor.get("name") or None) if isinstance(consignor, dict) else None,
-        "receiver": (consignee.get("name") or None) if isinstance(consignee, dict) else None,
+        "sender": (consignor.get("name") or None)
+        if isinstance(consignor, dict)
+        else None,
+        "receiver": (consignee.get("name") or None)
+        if isinstance(consignee, dict)
+        else None,
         "status": status,
         "raw_status": raw_status or status_code,
         "delivered": delivered,
@@ -139,7 +144,9 @@ def normalize_account_parcel(raw: dict, *, include_history: bool = False) -> dic
         ),
         # A single instant, as on the tracker; only a real window fills
         # planned_to. Meaningless once delivered.
-        "planned_from": None if delivered else to_iso_timestamp(
+        "planned_from": None
+        if delivered
+        else to_iso_timestamp(
             raw.get("estimatedTimeOfArrival") or raw.get("publicTimeOfArrival")
         ),
         "planned_to": None,

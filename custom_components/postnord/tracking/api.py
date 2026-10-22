@@ -18,10 +18,11 @@ coordinator relies on:
 There is no auth-error/reauth split: the key is not user-supplied, so a 401/403
 is a (rare) upstream change, retried like any other outage, not a user problem.
 """
+
 from __future__ import annotations
 
-import logging
 from http import HTTPStatus
+import logging
 from typing import Any
 
 import aiohttp
@@ -102,7 +103,7 @@ class PostNordApiClient:
 
 def _warn_web_key_rejected(status: int) -> None:
     """Warn once when the shared public web key stops being accepted."""
-    global _web_key_warned
+    global _web_key_warned  # noqa: PLW0603 - one-shot flag, reset by tests
     if _web_key_warned:
         return
     _web_key_warned = True

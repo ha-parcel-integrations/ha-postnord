@@ -4,8 +4,9 @@ These need no Home Assistant instance — the whole point of keeping
 ``parcels.py`` free of I/O is that the carrier-specific mapping (the part you
 rewrite per carrier) can be tested as plain functions.
 """
+
+from datetime import UTC, datetime, timedelta
 import logging
-from datetime import datetime, timedelta, timezone
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -31,8 +32,7 @@ from custom_components.postnord.tracking.parcels import (
     sort_parcels_by_ts,
     to_iso_timestamp,
 )
-
-from ..payloads import active_sample, delivered_sample, event, pickup_sample
+from tests.payloads import active_sample, delivered_sample, event, pickup_sample
 
 
 def _events(sample: dict) -> list[dict]:
@@ -46,7 +46,7 @@ def _events(sample: dict) -> list[dict]:
 
 
 @pytest.mark.parametrize(
-    "code,expected",
+    ("code", "expected"),
     [
         ("CREATED", ParcelStatus.REGISTERED),
         ("INFORMED", ParcelStatus.REGISTERED),
@@ -97,7 +97,7 @@ def test_unmapped_status_warns_only_once(caplog):
 def test_parse_iso_handles_z_naive_and_garbage():
     assert parse_iso("2026-04-29T13:12:42Z").tzinfo is not None
     # A naive value is assumed UTC so mixed lists still sort.
-    assert parse_iso("2026-04-29T13:12:42").tzinfo == timezone.utc
+    assert parse_iso("2026-04-29T13:12:42").tzinfo == UTC
     assert parse_iso("not-a-date") is None
     assert parse_iso(None) is None
 
@@ -432,7 +432,7 @@ def _entry(filter_type: str, amount: int) -> MockConfigEntry:
 
 
 def _delivered_pair() -> list[dict]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return [
         {"barcode": "RECENT", "delivered_at": (now - timedelta(days=1)).isoformat()},
         {"barcode": "OLD", "delivered_at": (now - timedelta(days=30)).isoformat()},
@@ -469,7 +469,9 @@ def test_history_carries_the_status_over_other_events(caplog):
     events = [
         event("EN_ROUTE", "2026-09-21T16:32:00Z", "Under transportation", "31"),
         event("OTHER", "2026-09-21T18:40:00Z", "Under transportation", "z3D"),
-        event("AVAILABLE_FOR_DELIVERY", "2026-09-23T07:34:00Z", "At a service point", "1"),
+        event(
+            "AVAILABLE_FOR_DELIVERY", "2026-09-23T07:34:00Z", "At a service point", "1"
+        ),
         event("OTHER", "2026-09-23T07:35:26Z", "Text message sent", "z82"),
     ]
     with caplog.at_level(logging.WARNING):
