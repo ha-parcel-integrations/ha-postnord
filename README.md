@@ -56,7 +56,11 @@ A custom Home Assistant integration that tracks your [PostNord](https://www.post
 ### HACS (recommended)
 
 1. Open HACS and search for **PostNord**.
-2. Install it and restart Home Assistant.
+2. Install it and restart Home Assistant if HACS asks you to.
+
+Or click the button below to open it directly in HACS:
+
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ha-parcel-integrations&repository=ha-postnord&category=integration)
 
 ### Manual
 
@@ -64,7 +68,9 @@ Copy `custom_components/postnord` into your `config/custom_components/` folder a
 
 ## Configuration
 
-Add the integration via **Settings → Devices & Services → Add Integration → PostNord** and choose how to follow your parcels. Both can be used side by side.
+[![Open your Home Assistant instance and start setting up this integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=postnord)
+
+Or set it up by hand: add the integration via **Settings → Devices & Services → Add Integration → PostNord** and choose how to follow your parcels. Both can be used side by side.
 
 ### Tracking codes
 
