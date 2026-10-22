@@ -11,9 +11,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from . import PostNordConfigEntry
+from . import ParcelCoordinator, PostNordConfigEntry
 from .device import ATTRIBUTION, build_device_info
-from .tracking.coordinator import PostNordCoordinator
 from .tracking.parcels import parse_iso
 
 PARALLEL_UPDATES = 0
@@ -32,9 +31,7 @@ async def async_setup_entry(
     )
 
 
-class PostNordDeliveriesCalendar(
-    CoordinatorEntity[PostNordCoordinator], CalendarEntity
-):
+class PostNordDeliveriesCalendar(CoordinatorEntity[ParcelCoordinator], CalendarEntity):
     """A read-only calendar of expected PostNord deliveries.
 
     Each active tracked parcel with a known delivery moment becomes an event.
@@ -46,7 +43,7 @@ class PostNordDeliveriesCalendar(
     _attr_translation_key = "deliveries"
     _attr_attribution = ATTRIBUTION
 
-    def __init__(self, coordinator: PostNordCoordinator, entry: ConfigEntry) -> None:
+    def __init__(self, coordinator: ParcelCoordinator, entry: ConfigEntry) -> None:
         """Initialize the calendar."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_deliveries"

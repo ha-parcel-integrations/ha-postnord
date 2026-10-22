@@ -359,8 +359,11 @@ def _quantity(quantity: Any, factors: dict[str, float]) -> float | None:
     if not isinstance(quantity, dict):
         return None
     factor = factors.get(str(quantity.get("unit")).lower())
+    raw_value = quantity.get("value")
+    if raw_value is None:
+        return None
     try:
-        value = float(quantity.get("value"))
+        value = float(raw_value)
     except (TypeError, ValueError):
         return None
     return value * factor if factor is not None else None
@@ -405,12 +408,14 @@ def _dimensions_cm(raw: dict) -> dict[str, Any] | None:
     """
     for key in ("statedMeasurement", "dimensions"):
         measured = _measurement(raw, key)
-        axes = [
+        length, width, height = (
             _quantity(measured.get(axis), {"m": 100, "cm": 1, "mm": 0.1})
             for axis in ("length", "width", "height")
-        ]
-        if all(axis is not None for axis in axes):
-            return format_dimensions(*(round(axis, 1) for axis in axes))
+        )
+        if length is not None and width is not None and height is not None:
+            return format_dimensions(
+                round(length, 1), round(width, 1), round(height, 1)
+            )
     return None
 
 

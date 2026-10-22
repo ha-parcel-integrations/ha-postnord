@@ -27,12 +27,15 @@ from .tracking.coordinator import PostNordCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
+ParcelCoordinator = PostNordCoordinator | PostNordAccountCoordinator
+
+
 @dataclass
 class PostNordData:
     """Runtime data attached to the PostNord config entry."""
 
     client: PostNordApiClient | PostNordAccountClient
-    coordinator: PostNordCoordinator | PostNordAccountCoordinator
+    coordinator: ParcelCoordinator
 
 
 type PostNordConfigEntry = ConfigEntry[PostNordData]
@@ -41,6 +44,8 @@ type PostNordConfigEntry = ConfigEntry[PostNordData]
 async def async_setup_entry(hass: HomeAssistant, entry: PostNordConfigEntry) -> bool:
     """Set up PostNord from a config entry."""
     is_account = entry.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_ACCOUNT
+    client: PostNordApiClient | PostNordAccountClient
+    coordinator: PostNordCoordinator | PostNordAccountCoordinator
     if is_account:
 
         async def async_store_tokens(tokens: dict[str, str]) -> None:

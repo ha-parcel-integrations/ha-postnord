@@ -62,6 +62,8 @@ def _warn_compatibility() -> None:
 class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
     """Refresh the whole account inbox; accounts never suspend polling."""
 
+    config_entry: ConfigEntry
+
     def __init__(
         self, hass: HomeAssistant, client: PostNordAccountClient, entry: ConfigEntry
     ) -> None:
