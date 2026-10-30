@@ -197,3 +197,37 @@ async def test_outgoing_fires_only_the_sender_events(hass):
     await coordinator._async_update_data()
     await hass.async_block_till_done()
     assert [e.event_type for e in fired] == [f"{DOMAIN}_outgoing_parcel_delivered"]
+
+
+async def test_a_parcel_the_delivered_list_leaves_out_still_fires_delivered(hass):
+    """The retention option limits the delivered sensor, never the events."""
+    other = "ACCOUNT0000002"
+    coordinator = _coordinator(hass, tracking_body(active=[], archived=[]))
+    hass.config_entries.async_update_entry(
+        coordinator.config_entry,
+        options={**coordinator.config_entry.options, CONF_DELIVERED_FILTER_AMOUNT: 1},
+    )
+    await coordinator._async_update_data()
+    fired = []
+    hass.bus.async_listen(
+        f"{DOMAIN}_parcel_delivered", callback(lambda e: fired.append(e))
+    )
+    coordinator._client.async_get_tracking.return_value = {
+        "activeShipments": [account_active(), account_active(other)],
+        "archivedShipments": [],
+    }
+    await coordinator._async_update_data()
+    coordinator._client.async_get_tracking.return_value = {
+        "activeShipments": [],
+        "archivedShipments": [
+            account_delivered(ACCOUNT_ACTIVE_CODE),
+            account_delivered(other),
+        ],
+    }
+    await coordinator._async_update_data()
+    await hass.async_block_till_done()
+
+    assert sorted(e.data["barcode"] for e in fired) == sorted(
+        [ACCOUNT_ACTIVE_CODE, other]
+    )
+    assert len(coordinator.delivered) == 1

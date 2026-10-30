@@ -140,13 +140,13 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         self.outgoing_active = sort_parcels_by_ts(
             [p for p in outgoing.values() if not p["delivered"]], "planned_from"
         )
+        outgoing_delivered_sorted = sort_parcels_by_ts(
+            [p for p in outgoing.values() if p["delivered"]],
+            "delivered_at",
+            descending=True,
+        )
         self.outgoing_delivered = apply_delivered_filter(
-            sort_parcels_by_ts(
-                [p for p in outgoing.values() if p["delivered"]],
-                "delivered_at",
-                descending=True,
-            ),
-            self.config_entry,
+            outgoing_delivered_sorted, self.config_entry
         )
         fire_outgoing_change_events(
             self.hass,
@@ -158,15 +158,17 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
 
         active = [p for p in incoming.values() if not p["delivered"]]
         delivered = [p for p in incoming.values() if p["delivered"]]
-        self.delivered = apply_delivered_filter(
-            sort_parcels_by_ts(delivered, "delivered_at", descending=True),
-            self.config_entry,
+        delivered_sorted = sort_parcels_by_ts(
+            delivered, "delivered_at", descending=True
         )
+        self.delivered = apply_delivered_filter(delivered_sorted, self.config_entry)
         normalized_active = sort_parcels_by_ts(active, "planned_from")
 
         # Active + delivered, combined so the transition to delivered is
         # visible in one set — same shape the tracking coordinator diffs.
-        seen = normalized_active + self.delivered
+        # Events and remembered state cover every parcel; the retention option
+        # only limits what the delivered sensor shows.
+        seen = normalized_active + delivered_sorted
         fire_incoming_change_events(
             self.hass,
             seen,
