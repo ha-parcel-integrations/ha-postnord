@@ -131,19 +131,23 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         # it; keep the first, which is the active one.
         incoming: dict[str, dict] = {}
         outgoing: dict[str, dict] = {}
+        # An archived parcel is not in the app's inbox, so it is never listed
+        # as active, but it stays in the event state: one archived on the way
+        # still fires its delivered event when it arrives.
+        archived: set[str] = set()
         for raw in buckets["activeShipments"] + buckets["archivedShipments"]:
             parcel = normalize_account_parcel(raw, include_history=include_history)
-            # An archived parcel is not in the app's inbox, so it is never
-            # active. A delivered one is kept: it feeds the delivered list and
-            # the delivered event.
-            if is_archived(raw) and not parcel["delivered"]:
-                continue
             target = outgoing if is_outgoing(raw) else incoming
             if parcel["barcode"] and parcel["barcode"] not in target:
                 target[parcel["barcode"]] = parcel
+                if is_archived(raw):
+                    archived.add(parcel["barcode"])
+
+        def is_listed_active(parcel: dict) -> bool:
+            return not parcel["delivered"] and parcel["barcode"] not in archived
 
         self.outgoing_active = sort_parcels_by_ts(
-            [p for p in outgoing.values() if not p["delivered"]], "planned_from"
+            [p for p in outgoing.values() if is_listed_active(p)], "planned_from"
         )
         outgoing_delivered_sorted = sort_parcels_by_ts(
             [p for p in outgoing.values() if p["delivered"]],
@@ -161,7 +165,12 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         )
         self._known_outgoing_state = snapshot_states(list(outgoing.values()))
 
-        active = [p for p in incoming.values() if not p["delivered"]]
+        active = [p for p in incoming.values() if is_listed_active(p)]
+        archived_on_the_way = [
+            p
+            for p in incoming.values()
+            if not p["delivered"] and p["barcode"] in archived
+        ]
         delivered = [p for p in incoming.values() if p["delivered"]]
         delivered_sorted = sort_parcels_by_ts(
             delivered, "delivered_at", descending=True
@@ -173,7 +182,7 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         # visible in one set — same shape the tracking coordinator diffs.
         # Events and remembered state cover every parcel; the retention option
         # only limits what the delivered sensor shows.
-        seen = normalized_active + delivered_sorted
+        seen = normalized_active + archived_on_the_way + delivered_sorted
         fire_incoming_change_events(
             self.hass,
             seen,

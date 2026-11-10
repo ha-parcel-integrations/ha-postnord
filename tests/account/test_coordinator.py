@@ -185,6 +185,38 @@ async def test_a_tracked_parcel_that_gets_archived_leaves_without_events(hass):
     assert fired == []
 
 
+async def test_a_parcel_archived_on_the_way_still_fires_delivered(hass):
+    coordinator = _coordinator(hass, tracking_body(active=[], archived=[]))
+    await coordinator._async_update_data()
+    coordinator._client.async_get_tracking.return_value = {
+        "activeShipments": [account_active()],
+        "archivedShipments": [],
+    }
+    await coordinator._async_update_data()
+    archived = account_active()
+    archived["archivedStatus"] = "ARCHIVED"
+    coordinator._client.async_get_tracking.return_value = {
+        "activeShipments": [],
+        "archivedShipments": [archived],
+    }
+    await coordinator._async_update_data()
+    await hass.async_block_till_done()
+
+    delivered = []
+    hass.bus.async_listen(
+        f"{DOMAIN}_parcel_delivered", callback(lambda e: delivered.append(e))
+    )
+    landed = account_delivered(ACCOUNT_ACTIVE_CODE)
+    coordinator._client.async_get_tracking.return_value = {
+        "activeShipments": [],
+        "archivedShipments": [landed],
+    }
+    assert await coordinator._async_update_data() == []
+    await hass.async_block_till_done()
+    assert [e.data["barcode"] for e in delivered] == [ACCOUNT_ACTIVE_CODE]
+    assert [p["barcode"] for p in coordinator.delivered] == [ACCOUNT_ACTIVE_CODE]
+
+
 async def test_reauth_required_raises_auth_failed(hass):
     coordinator = _coordinator(hass, side_effect=PostNordAccountReauthRequired("x"))
     with pytest.raises(ConfigEntryAuthFailed):

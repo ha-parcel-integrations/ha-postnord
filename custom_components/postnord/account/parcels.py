@@ -116,7 +116,10 @@ def account_barcode(raw: dict) -> str | None:
 
 def normalize_account_parcel(raw: dict, *, include_history: bool = False) -> dict:
     """Return the canonical parcel dict for one account shipment."""
-    check_account_shape(raw)
+    # An archived shipment can be years old; only live ones say whether the
+    # response shape drifted, and the warning fires once per field.
+    if not is_archived(raw):
+        check_account_shape(raw)
 
     barcode = account_barcode(raw)
     status_code = raw.get("status") or _first_item(raw).get("status")
