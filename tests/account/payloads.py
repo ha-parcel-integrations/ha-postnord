@@ -12,6 +12,7 @@ from tests.payloads import delivered_sample, event
 
 ACCOUNT_ACTIVE_CODE = "00000000000000011"
 ACCOUNT_DELIVERED_CODE = "00000000000000012"
+ACCOUNT_ARCHIVED_CODE = "00000000000000013"
 
 
 def account_active(code: str = ACCOUNT_ACTIVE_CODE) -> dict:
@@ -31,7 +32,33 @@ def account_active(code: str = ACCOUNT_ACTIVE_CODE) -> dict:
 def account_delivered(code: str = ACCOUNT_DELIVERED_CODE) -> dict:
     """An archived, delivered account parcel."""
     sample = delivered_sample(code)
+    sample["archivedStatus"] = "ARCHIVED"
     sample["userData"] = {"dateAdded": "2026-04-27T23:10:00Z"}
+    return sample
+
+
+def account_archived(
+    code: str = ACCOUNT_ARCHIVED_CODE, status: str = "INFORMED"
+) -> dict:
+    """A parcel PostNord auto-archived long ago without ever delivering it.
+
+    The inbox keeps returning it with the status of its last scan, e.g. an
+    announcement that was never followed up or a return that never finished.
+    """
+    sample = delivered_sample(code)
+    sample["status"] = status
+    sample["statusText"] = {"header": "No further scans", "body": "Archived."}
+    sample["archivedStatus"] = "ARCHIVED"
+    sample["userData"] = {
+        "dateAdded": "2024-01-10T08:00:00.000Z",
+        "dateArchived": "2025-01-10T08:00:00.000Z",
+        "direction": "INCOMING",
+        "hasBeenAutoArchived": True,
+    }
+    sample["items"][0]["status"] = status
+    sample["items"][0]["events"] = [
+        event(status, "2024-01-12T09:30:00Z", "Last scan", "68"),
+    ]
     return sample
 
 

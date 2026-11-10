@@ -6,6 +6,7 @@ import pytest
 
 from custom_components.postnord.account.parcels import (
     account_barcode,
+    is_archived,
     is_outgoing,
     normalize_account_parcel,
 )
@@ -21,6 +22,7 @@ from tests.tracking.test_parcels import CANONICAL_KEYS
 from .payloads import (
     ACCOUNT_ACTIVE_CODE,
     account_active,
+    account_archived,
     account_delivered,
     captured_service_point_delivery,
 )
@@ -107,9 +109,23 @@ def test_raw_is_the_untouched_shipment():
 
 
 def test_captured_shape_raises_no_missing_field_warning(caplog):
+    raw = captured_service_point_delivery()
+    del raw["archivedStatus"]
     with caplog.at_level(logging.WARNING):
-        normalize_account_parcel(captured_service_point_delivery())
+        normalize_account_parcel(raw)
     assert "missing" not in caplog.text
+
+
+def test_an_archived_shipment_does_not_use_up_the_shape_warning(caplog):
+    stale = account_archived()
+    stale["items"][0].pop("statusText", None)
+    live = account_active()
+    live["items"][0].pop("statusText", None)
+    with caplog.at_level(logging.WARNING):
+        normalize_account_parcel(stale)
+        assert "items[].statusText" not in caplog.text
+        normalize_account_parcel(live)
+    assert caplog.text.count("'items[].statusText'") == 1
 
 
 def test_unseen_direction_warns_once_and_stays_listed(caplog):
@@ -260,6 +276,15 @@ def test_only_outgoing_direction_is_outgoing(caplog):
     assert "direction" not in caplog.text
     del raw["userData"]
     assert is_outgoing(raw) is False
+
+
+def test_only_the_archived_flag_marks_a_parcel_archived():
+    assert is_archived(account_archived()) is True
+    assert is_archived(captured_service_point_delivery()) is True
+    assert is_archived(account_active()) is False
+    raw = account_archived()
+    del raw["archivedStatus"]
+    assert is_archived(raw) is False
 
 
 def test_extended_retention_event_is_still_awaiting_pickup():

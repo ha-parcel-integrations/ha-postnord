@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.postnord.account.client import PostNordAccountReauthRequired
@@ -19,7 +19,12 @@ from custom_components.postnord.const import (
 from custom_components.postnord.diagnostics import async_get_config_entry_diagnostics
 from tests.payloads import active_sample
 
-from .payloads import captured_service_point_delivery, tracking_body
+from .payloads import (
+    ACCOUNT_ACTIVE_CODE,
+    account_active,
+    captured_service_point_delivery,
+    tracking_body,
+)
 
 EMAIL = "someone@example.com"
 _TRACKING = (
@@ -84,6 +89,26 @@ async def test_account_entry_loads_without_services(hass):
     assert hass.states.get(f"{prefix}_outgoing_parcels").state == "0"
     assert hass.states.get(f"{prefix}_outgoing_delivered_parcels").state == "0"
 
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_a_tracked_parcel_that_gets_archived_loses_its_sensor(hass):
+    entry = _account(hass)
+    assert await _setup(hass, entry)
+    registry = er.async_get(hass)
+    parcel_unique_id = f"{entry.entry_id}_{ACCOUNT_ACTIVE_CODE}"
+    assert registry.async_get_entity_id("sensor", DOMAIN, parcel_unique_id)
+
+    archived = account_active()
+    archived["archivedStatus"] = "ARCHIVED"
+    body = {"activeShipments": [], "archivedShipments": [archived]}
+    with patch(_TRACKING, new=AsyncMock(return_value=body)):
+        await entry.runtime_data.coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+    assert registry.async_get_entity_id("sensor", DOMAIN, parcel_unique_id) is None
+    prefix = f"sensor.postnord_{EMAIL.replace('@', '_').replace('.', '_')}"
+    assert hass.states.get(f"{prefix}_incoming_parcels").state == "0"
     assert await hass.config_entries.async_unload(entry.entry_id)
 
 
