@@ -6,6 +6,7 @@ import pytest
 
 from custom_components.postnord.account.parcels import (
     account_barcode,
+    is_archived,
     is_outgoing,
     normalize_account_parcel,
 )
@@ -21,6 +22,7 @@ from tests.tracking.test_parcels import CANONICAL_KEYS
 from .payloads import (
     ACCOUNT_ACTIVE_CODE,
     account_active,
+    account_archived,
     account_delivered,
     captured_service_point_delivery,
 )
@@ -260,6 +262,15 @@ def test_only_outgoing_direction_is_outgoing(caplog):
     assert "direction" not in caplog.text
     del raw["userData"]
     assert is_outgoing(raw) is False
+
+
+def test_only_the_archived_flag_marks_a_parcel_archived():
+    assert is_archived(account_archived()) is True
+    assert is_archived(captured_service_point_delivery()) is True
+    assert is_archived(account_active()) is False
+    raw = account_archived()
+    del raw["archivedStatus"]
+    assert is_archived(raw) is False
 
 
 def test_extended_retention_event_is_still_awaiting_pickup():

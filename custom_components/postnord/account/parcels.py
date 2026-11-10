@@ -99,6 +99,15 @@ def is_outgoing(raw: dict) -> bool:
     return isinstance(user_data, dict) and user_data.get("direction") == "OUTGOING"
 
 
+def is_archived(raw: dict) -> bool:
+    """Whether PostNord has archived this shipment, by hand or automatically.
+
+    The app keeps an archived shipment out of the inbox, whatever its last
+    status says.
+    """
+    return raw.get("archivedStatus") == "ARCHIVED"
+
+
 def account_barcode(raw: dict) -> str | None:
     """Return the shipment's tracking number, or its first item's id."""
     barcode = raw.get("shipmentId") or _first_item(raw).get("itemId")

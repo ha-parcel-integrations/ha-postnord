@@ -86,6 +86,17 @@ re-export shims kept so existing imports still resolve
   `_outgoing_parcel_status_changed` / `_outgoing_parcel_delivered` and never
   count toward incoming or awaiting pickup. A direction value other than
   `INCOMING`/`OUTGOING` warns once.
+- **Archived follows the PostNord app too**: a shipment with `archivedStatus ==
+  "ARCHIVED"` (by hand, or `userData.hasBeenAutoArchived`) is not in the app's
+  inbox, so the coordinator skips it unless it is `delivered` — otherwise an
+  announcement that was never scanned, or a return that never finished, sits
+  among the incoming parcels forever. A delivered parcel can already be archived
+  when it first arrives (the captured delivery is), so skipping every archived
+  parcel would drop those from the delivered sensor and lose their delivered
+  event. A tracked parcel that gets archived undelivered just leaves `data`: no
+  event fires and the summary sensor removes its per-parcel sensor. The inbox
+  request has no filter for this (`summary` only decides how much of an
+  archived parcel comes back), so it is done in the coordinator.
 - **Event codes `45` / `z2F` are "extended retention time"** in the app, so
   their history entry is `at_pickup_point` whatever the event's own status.
 - **History: an `OTHER` event keeps the previous status.** On events `OTHER`
@@ -96,8 +107,8 @@ re-export shims kept so existing imports still resolve
 - **A finished return is `delivered`** (`settle_return`): PostNord ends a
   return leg with a `DELIVERED` event while the shipment keeps `RETURNED`. Seen
   in a real account history 2026-09-27. Same rule as bpost; `raw_status` keeps
-  the return text. Without it an archived return sits among the active parcels
-  forever.
+  the return text. Without it a finished return sits among the active parcels
+  forever, or, once archived, never shows as delivered.
 
 **An entry's source is `entry.data[CONF_SOURCE]` (`tracking` / `account`).**
 Setup opens on a menu. The tracking hub keeps unique id `postnord`, and that

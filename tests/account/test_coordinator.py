@@ -27,6 +27,7 @@ from .payloads import (
     ACCOUNT_ACTIVE_CODE,
     ACCOUNT_DELIVERED_CODE,
     account_active,
+    account_archived,
     account_delivered,
     tracking_body,
 )
@@ -88,6 +89,36 @@ async def test_a_shipment_in_both_buckets_is_listed_once(hass):
     assert len(data) == 1
 
 
+async def test_archived_parcels_that_were_never_delivered_are_not_incoming(hass):
+    """PostNord keeps returning parcels it archived long ago; the app hides them."""
+    coordinator = _coordinator(
+        hass,
+        tracking_body(
+            active=[],
+            archived=[
+                account_archived(status="INFORMED"),
+                account_archived("00000000000000014", "RETURNED"),
+            ],
+        ),
+    )
+    assert await coordinator._async_update_data() == []
+    assert coordinator.delivered == []
+    assert coordinator.outgoing_active == []
+
+
+async def test_archiving_leaves_the_other_parcels_alone(hass):
+    coordinator = _coordinator(
+        hass,
+        tracking_body(
+            active=[account_active()],
+            archived=[account_delivered(), account_archived()],
+        ),
+    )
+    data = await coordinator._async_update_data()
+    assert [p["barcode"] for p in data] == [ACCOUNT_ACTIVE_CODE]
+    assert [p["barcode"] for p in coordinator.delivered] == [ACCOUNT_DELIVERED_CODE]
+
+
 async def test_parcels_without_a_number_are_dropped(hass):
     nameless = account_active()
     del nameless["shipmentId"]
@@ -121,6 +152,37 @@ async def test_events_fire_after_the_first_refresh(hass):
         f"{DOMAIN}_parcel_registered",
         f"{DOMAIN}_parcel_delivered",
     ]
+
+
+async def test_a_tracked_parcel_that_gets_archived_leaves_without_events(hass):
+    """Archived is not delivered: the parcel stops being listed, nothing fires."""
+    coordinator = _coordinator(hass, tracking_body(active=[], archived=[]))
+    await coordinator._async_update_data()
+    coordinator._client.async_get_tracking.return_value = {
+        "activeShipments": [account_active()],
+        "archivedShipments": [],
+    }
+    data = await coordinator._async_update_data()
+    assert [p["barcode"] for p in data] == [ACCOUNT_ACTIVE_CODE]
+    await hass.async_block_till_done()
+
+    fired = []
+    for suffix in (
+        "parcel_registered",
+        "parcel_status_changed",
+        "parcel_delivered",
+        "parcel_delivery_time_changed",
+    ):
+        hass.bus.async_listen(f"{DOMAIN}_{suffix}", callback(lambda e: fired.append(e)))
+    archived = account_active()
+    archived["archivedStatus"] = "ARCHIVED"
+    coordinator._client.async_get_tracking.return_value = {
+        "activeShipments": [],
+        "archivedShipments": [archived],
+    }
+    assert await coordinator._async_update_data() == []
+    await hass.async_block_till_done()
+    assert fired == []
 
 
 async def test_reauth_required_raises_auth_failed(hass):
@@ -161,6 +223,20 @@ async def test_outgoing_parcels_live_apart(hass):
     assert [p["barcode"] for p in data] == [ACCOUNT_ACTIVE_CODE]
     assert [p["barcode"] for p in coordinator.delivered] == [ACCOUNT_DELIVERED_CODE]
     assert [p["barcode"] for p in coordinator.outgoing_active] == ["OUT1"]
+    assert [p["barcode"] for p in coordinator.outgoing_delivered] == ["OUT2"]
+
+
+async def test_an_archived_outgoing_parcel_that_was_never_delivered_is_not_on_its_way(
+    hass,
+):
+    stale = account_archived("OUT1")
+    stale["userData"]["direction"] = "OUTGOING"
+    coordinator = _coordinator(
+        hass,
+        tracking_body(active=[], archived=[stale, _outgoing("OUT2", delivered=True)]),
+    )
+    await coordinator._async_update_data()
+    assert coordinator.outgoing_active == []
     assert [p["barcode"] for p in coordinator.outgoing_delivered] == ["OUT2"]
 
 

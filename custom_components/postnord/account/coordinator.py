@@ -38,7 +38,7 @@ from .client import (
     PostNordAccountCompatibilityError,
     PostNordAccountReauthRequired,
 )
-from .parcels import is_outgoing, normalize_account_parcel
+from .parcels import is_archived, is_outgoing, normalize_account_parcel
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -133,6 +133,11 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         outgoing: dict[str, dict] = {}
         for raw in buckets["activeShipments"] + buckets["archivedShipments"]:
             parcel = normalize_account_parcel(raw, include_history=include_history)
+            # An archived parcel is not in the app's inbox, so it is never
+            # active. A delivered one is kept: it feeds the delivered list and
+            # the delivered event.
+            if is_archived(raw) and not parcel["delivered"]:
+                continue
             target = outgoing if is_outgoing(raw) else incoming
             if parcel["barcode"] and parcel["barcode"] not in target:
                 target[parcel["barcode"]] = parcel

@@ -138,7 +138,7 @@ Standard HA removal applies: **Settings → Devices & Services → PostNord → 
 
 A delivered parcel moves from its per-parcel sensor to the delivered sensor automatically.
 
-An **account** gets the same sensors, named after the account (for example `sensor.postnord_someone_example_com_incoming_parcels`), plus two for the parcels you **send**: `…_outgoing_parcels` (on the way) and `…_outgoing_delivered_parcels` (recently delivered, same retention option). Parcels you send never count as incoming or awaiting pickup.
+An **account** gets the same sensors, named after the account (for example `sensor.postnord_someone_example_com_incoming_parcels`), plus two for the parcels you **send**: `…_outgoing_parcels` (on the way) and `…_outgoing_delivered_parcels` (recently delivered, same retention option). Parcels you send never count as incoming or awaiting pickup. A parcel that is archived, by you or automatically by PostNord, is left out of incoming and on the way, as in the app; if it was delivered it still shows under recently delivered.
 
 A **`button.postnord_refresh`** entity triggers an immediate poll outside the
 regular interval, and a **`calendar.postnord_deliveries`** entity shows expected
