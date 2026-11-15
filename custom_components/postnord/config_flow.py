@@ -14,6 +14,7 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import voluptuous as vol
@@ -23,6 +24,7 @@ from .account.client import (
     PostNordAccountClient,
     PostNordAccountInvalidRedirect,
     PostNordLogin,
+    async_revoke,
 )
 from .const import (
     ACCOUNT_REDIRECT_DOCS_URL,
@@ -140,7 +142,11 @@ class PostNordConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 email, tokens = result
                 await self.async_set_unique_id(f"account:{email.lower()}")
-                self._abort_if_unique_id_configured()
+                try:
+                    self._abort_if_unique_id_configured()
+                except AbortFlow:
+                    await self._async_end_login(tokens[CONF_REFRESH_TOKEN])
+                    raise
                 return self.async_create_entry(
                     title=email,
                     data={CONF_SOURCE: SOURCE_ACCOUNT, CONF_EMAIL: email, **tokens},
@@ -173,10 +179,18 @@ class PostNordConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 email, tokens = result
                 await self.async_set_unique_id(f"account:{email.lower()}")
-                self._abort_if_unique_id_mismatch()
-                return self.async_update_reload_and_abort(
+                try:
+                    self._abort_if_unique_id_mismatch()
+                except AbortFlow:
+                    await self._async_end_login(tokens[CONF_REFRESH_TOKEN])
+                    raise
+                old_refresh = entry.data.get(CONF_REFRESH_TOKEN)
+                result = self.async_update_reload_and_abort(
                     entry, data_updates={CONF_EMAIL: email, **tokens}
                 )
+                if old_refresh and old_refresh != tokens[CONF_REFRESH_TOKEN]:
+                    await self._async_end_login(old_refresh)
+                return result
 
         return self.async_show_form(
             step_id="reauth_confirm",
@@ -205,17 +219,29 @@ class PostNordConfigFlow(ConfigFlow, domain=DOMAIN):
         session = async_get_clientsession(self.hass)
         try:
             tokens = await self._login.async_exchange(session, pasted)
-            email = await PostNordAccountClient(
-                session,
-                access_token=tokens[CONF_ACCESS_TOKEN],
-                refresh_token=tokens[CONF_REFRESH_TOKEN],
-            ).async_get_email()
         except PostNordAccountInvalidRedirect:
             return "invalid_redirect"
         except PostNordAccountApiError:
             _LOGGER.debug("PostNord account login failed", exc_info=True)
             return "cannot_connect"
+        try:
+            email = await PostNordAccountClient(
+                session,
+                access_token=tokens[CONF_ACCESS_TOKEN],
+                refresh_token=tokens[CONF_REFRESH_TOKEN],
+            ).async_get_email()
+        except PostNordAccountApiError:
+            _LOGGER.debug("PostNord account login failed", exc_info=True)
+            await self._async_end_login(tokens[CONF_REFRESH_TOKEN])
+            return "cannot_connect"
         return email, tokens
+
+    async def _async_end_login(self, refresh_token: str) -> None:
+        """End a login the flow doesn't keep, so nobody is left holding it."""
+        try:
+            await async_revoke(async_get_clientsession(self.hass), refresh_token)
+        except PostNordAccountApiError:
+            _LOGGER.warning("A PostNord login that wasn't kept couldn't be ended")
 
 
 class PostNordOptionsFlowHandler(OptionsFlow):

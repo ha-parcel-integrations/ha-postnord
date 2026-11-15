@@ -8,6 +8,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.postnord.account.client import PostNordAccountReauthRequired
 from custom_components.postnord.const import (
+    ACCOUNT_REVOKE_URL,
     CONF_ACCESS_TOKEN,
     CONF_EMAIL,
     CONF_PARCELS,
@@ -223,3 +224,33 @@ async def test_diagnostics_redact_the_captured_account_shape(hass):
     assert delivered["raw"]["items"][0]["status"] == "DELIVERED"
     assert delivered["raw"]["items"][0]["dimensions"]["length"]["unit"] == "m"
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_removing_an_account_ends_its_login(hass, aioclient_mock):
+    entry = _account(hass)
+    assert await _setup(hass, entry)
+    aioclient_mock.post(ACCOUNT_REVOKE_URL, text="")
+    await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+    calls = [c for c in aioclient_mock.mock_calls if str(c[1]) == ACCOUNT_REVOKE_URL]
+    assert [c[2]["token"] for c in calls] == ["refresh-1"]
+
+
+async def test_a_failed_revocation_still_removes_the_entry(
+    hass, aioclient_mock, caplog
+):
+    entry = _account(hass)
+    assert await _setup(hass, entry)
+    aioclient_mock.post(ACCOUNT_REVOKE_URL, status=503)
+    await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.config_entries.async_get_entry(entry.entry_id) is None
+    assert entry.entry_id in caplog.text
+    assert EMAIL not in caplog.text
+
+
+async def test_removing_the_tracking_hub_revokes_nothing(hass, aioclient_mock):
+    entry = _tracking(hass)
+    await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+    assert aioclient_mock.call_count == 0

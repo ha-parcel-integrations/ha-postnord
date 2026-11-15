@@ -123,7 +123,7 @@ integration has.
 
 ## Removal
 
-Standard HA removal applies: **Settings → Devices & Services → PostNord → ⋮ → Delete**. Nothing is stored on PostNord's side.
+Standard HA removal applies: **Settings → Devices & Services → PostNord → ⋮ → Delete**. Deleting an account entry also signs Home Assistant's login out at PostNord; if that fails, a warning names the entry.
 
 ## Sensors
 

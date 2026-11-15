@@ -24,6 +24,7 @@ from ..const import (
     ACCOUNT_CONTEXT,
     ACCOUNT_LOCALE,
     ACCOUNT_REDIRECT_URI,
+    ACCOUNT_REVOKE_URL,
     ACCOUNT_SCOPES,
     ACCOUNT_TOKEN_URL,
     ACCOUNT_TRACKING_URL,
@@ -147,6 +148,25 @@ async def _post_token(
                 return status, None
     except (aiohttp.ClientError, TimeoutError) as err:
         raise PostNordAccountApiError("token endpoint unreachable") from err
+
+
+async def async_revoke(session: aiohttp.ClientSession, refresh_token: str) -> None:
+    """End a login at PostNord, so its refresh token can't renew access any more."""
+    try:
+        async with session.post(
+            ACCOUNT_REVOKE_URL,
+            data={
+                "token": refresh_token,
+                "token_type_hint": "refresh_token",
+                "client_id": ACCOUNT_CLIENT_ID,
+            },
+        ) as response:
+            status = response.status
+    except (aiohttp.ClientError, TimeoutError) as err:
+        raise PostNordAccountApiError("revocation endpoint unreachable") from err
+    # RFC 7009 answers an unknown or already revoked token with 200 as well.
+    if status != HTTPStatus.OK:
+        raise PostNordAccountApiError("revocation refused", status_code=status)
 
 
 def _tokens(body: Any) -> dict[str, str] | None:

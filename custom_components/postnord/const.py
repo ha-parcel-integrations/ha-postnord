@@ -109,6 +109,7 @@ CONF_REDIRECT_URL = "redirect_url"
 ACCOUNT_AUTHORIZE_URL = "https://account.postnord.com/auth"
 ACCOUNT_TOKEN_URL = "https://account.postnord.com/oauth2/token"
 ACCOUNT_USERINFO_URL = "https://account.postnord.com/userinfo"
+ACCOUNT_REVOKE_URL = "https://account.postnord.com/oauth2/revoke"
 ACCOUNT_CLIENT_ID = "receiverappprod3gvTgY5ATtYWZZy"
 ACCOUNT_REDIRECT_URI = "com.postnord.app://redirect"
 ACCOUNT_SCOPES = (

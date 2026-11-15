@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .account.client import PostNordAccountClient
+from .account.client import PostNordAccountApiError, PostNordAccountClient, async_revoke
 from .account.coordinator import PostNordAccountCoordinator
 from .const import (
     CONF_ACCESS_TOKEN,
@@ -122,3 +122,17 @@ async def async_unload_entry(hass: HomeAssistant, entry: PostNordConfigEntry) ->
     ):
         async_unload_services(hass)
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: PostNordConfigEntry) -> None:
+    """End an account entry's login, so its refresh token in a backup is useless."""
+    if entry.data.get(CONF_SOURCE, SOURCE_TRACKING) != SOURCE_ACCOUNT:
+        return
+    refresh_token = entry.data.get(CONF_REFRESH_TOKEN)
+    if not refresh_token:
+        return
+    try:
+        await async_revoke(async_get_clientsession(hass), refresh_token)
+    except PostNordAccountApiError:
+        # The entry id, not the title: the title is the account's email.
+        _LOGGER.warning("Could not end the PostNord login of entry %s", entry.entry_id)

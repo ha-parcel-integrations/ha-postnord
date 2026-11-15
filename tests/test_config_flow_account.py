@@ -6,6 +6,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.postnord.const import (
     ACCOUNT_REDIRECT_URI,
+    ACCOUNT_REVOKE_URL,
     ACCOUNT_TOKEN_URL,
     ACCOUNT_USERINFO_URL,
     CONF_ACCESS_TOKEN,
@@ -41,9 +42,18 @@ async def _account_step(hass):
     )
 
 
-def _mock_login(aioclient_mock, email=EMAIL):
+def _mock_login(aioclient_mock, email=EMAIL, revoke_status=200):
     aioclient_mock.post(ACCOUNT_TOKEN_URL, json=TOKENS)
     aioclient_mock.get(ACCOUNT_USERINFO_URL, json={"email": email})
+    aioclient_mock.post(ACCOUNT_REVOKE_URL, status=revoke_status, text="")
+
+
+def _revoked(aioclient_mock) -> list[str]:
+    return [
+        call[2]["token"]
+        for call in aioclient_mock.mock_calls
+        if str(call[1]) == ACCOUNT_REVOKE_URL
+    ]
 
 
 async def test_account_step_shows_the_login_link(hass):
@@ -72,6 +82,7 @@ async def test_account_flow_creates_entry(hass, aioclient_mock):
         CONF_REFRESH_TOKEN: "refresh-1",
     }
     assert result["result"].unique_id == "account:someone@example.com"
+    assert _revoked(aioclient_mock) == []
 
 
 async def test_bad_paste_keeps_the_same_login_link(hass, aioclient_mock):
@@ -118,6 +129,7 @@ async def test_same_account_in_other_casing_is_rejected(hass, aioclient_mock):
     )
     assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
+    assert _revoked(aioclient_mock) == ["refresh-1"]
 
 
 async def test_account_allowed_beside_the_tracking_hub(hass, aioclient_mock):
@@ -158,6 +170,7 @@ async def test_reauth_updates_the_tokens(hass, aioclient_mock):
     assert result["reason"] == "reauth_successful"
     assert entry.data[CONF_ACCESS_TOKEN] == "access-1"
     assert entry.data[CONF_REFRESH_TOKEN] == "refresh-1"
+    assert _revoked(aioclient_mock) == ["old-refresh"]
 
 
 async def test_reauth_with_another_account_is_refused(hass, aioclient_mock):
@@ -170,6 +183,7 @@ async def test_reauth_with_another_account_is_refused(hass, aioclient_mock):
     assert result["type"] == "abort"
     assert result["reason"] == "unique_id_mismatch"
     assert entry.data[CONF_ACCESS_TOKEN] == "old-access"
+    assert _revoked(aioclient_mock) == ["refresh-1"]
 
 
 async def test_reauth_bad_paste_shows_the_error(hass, aioclient_mock):
@@ -180,3 +194,30 @@ async def test_reauth_bad_paste_shows_the_error(hass, aioclient_mock):
     )
     assert result["type"] == "form"
     assert result["errors"] == {"base": "invalid_redirect"}
+
+
+async def test_login_without_email_is_ended(hass, aioclient_mock):
+    aioclient_mock.post(ACCOUNT_TOKEN_URL, json=TOKENS)
+    aioclient_mock.get(ACCOUNT_USERINFO_URL, status=500)
+    aioclient_mock.post(ACCOUNT_REVOKE_URL, text="")
+    result = await _account_step(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], _redirect(result)
+    )
+    assert result["errors"] == {"base": "cannot_connect"}
+    assert _revoked(aioclient_mock) == ["refresh-1"]
+
+
+async def test_reauth_keeps_the_new_login_when_the_old_cannot_be_ended(
+    hass, aioclient_mock, caplog
+):
+    entry = _account_entry(hass)
+    _mock_login(aioclient_mock, revoke_status=503)
+    result = await entry.start_reauth_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], _redirect(result)
+    )
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_REFRESH_TOKEN] == "refresh-1"
+    assert "couldn't be ended" in caplog.text
+    assert "old-refresh" not in caplog.text
