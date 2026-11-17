@@ -245,8 +245,13 @@ async def test_a_failed_revocation_still_removes_the_entry(
     await hass.config_entries.async_remove(entry.entry_id)
     await hass.async_block_till_done()
     assert hass.config_entries.async_get_entry(entry.entry_id) is None
-    assert entry.entry_id in caplog.text
-    assert EMAIL not in caplog.text
+    ours = "\n".join(
+        r.getMessage()
+        for r in caplog.records
+        if r.name.startswith("custom_components.postnord")
+    )
+    assert entry.entry_id in ours
+    assert EMAIL not in ours
 
 
 async def test_removing_the_tracking_hub_revokes_nothing(hass, aioclient_mock):

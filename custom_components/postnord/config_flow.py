@@ -185,12 +185,12 @@ class PostNordConfigFlow(ConfigFlow, domain=DOMAIN):
                     await self._async_end_login(tokens[CONF_REFRESH_TOKEN])
                     raise
                 old_refresh = entry.data.get(CONF_REFRESH_TOKEN)
-                result = self.async_update_reload_and_abort(
+                outcome = self.async_update_reload_and_abort(
                     entry, data_updates={CONF_EMAIL: email, **tokens}
                 )
                 if old_refresh and old_refresh != tokens[CONF_REFRESH_TOKEN]:
                     await self._async_end_login(old_refresh)
-                return result
+                return outcome
 
         return self.async_show_form(
             step_id="reauth_confirm",
