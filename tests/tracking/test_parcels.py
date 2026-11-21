@@ -216,13 +216,13 @@ def test_normalize_history_is_opt_in():
     assert parcel["history"][0]["status"] == ParcelStatus.REGISTERED
 
 
-def test_normalize_active_parcel_has_point_eta():
+def test_normalize_active_parcel_eta_runs_to_the_end_of_its_day(amsterdam):
     parcel = normalize_parcel(active_sample())
     assert parcel["status"] == ParcelStatus.OUT_FOR_DELIVERY
     assert parcel["delivered"] is False
     assert parcel["planned_from"] == "2026-04-29T13:00:00Z"
-    # PostNord's ETA is a single instant, so there is never a window end.
-    assert parcel["planned_to"] is None
+    # PostNord's ETA is a single instant: it runs to the end of that day.
+    assert parcel["planned_to"] == "2026-04-29T23:59:59+02:00"
 
 
 def test_normalize_weight_converts_grams():
@@ -497,13 +497,15 @@ def test_unknown_event_status_still_warns(caplog):
     assert "TELEPORTED" in caplog.text
 
 
-def test_finished_return_is_delivered_on_the_tracker_too():
+def test_finished_return_is_finished_but_stays_returning_on_the_tracker_too():
     raw = delivered_sample()
     raw["status"] = "RETURNED"
     raw["items"][0]["events"].insert(
         0, event("DELIVERED", "2026-05-13T20:55:00Z", "Delivered back", "21")
     )
-    assert normalize_parcel(raw)["status"] == ParcelStatus.DELIVERED
+    parcel = normalize_parcel(raw)
+    assert parcel["status"] == ParcelStatus.RETURNING
+    assert parcel["delivered"] is True
 
 
 def test_pickup_point_prefers_destination_delivery_point():

@@ -46,12 +46,12 @@ def test_active_parcel():
     assert parcel["history"] is None
 
 
-def test_eta_is_a_point_estimate_until_delivered():
+def test_eta_runs_to_the_end_of_its_day_until_delivered(amsterdam):
     raw = account_active()
     raw["estimatedTimeOfArrival"] = "2026-04-29T13:00:00Z"
     parcel = normalize_account_parcel(raw)
     assert parcel["planned_from"] == "2026-04-29T13:00:00Z"
-    assert parcel["planned_to"] is None
+    assert parcel["planned_to"] == "2026-04-29T23:59:59+02:00"
     raw["status"] = "DELIVERED"
     assert normalize_account_parcel(raw)["planned_from"] is None
 
@@ -86,7 +86,7 @@ def test_captured_service_point_delivery():
     assert parcel["sender"] == "Example Shop"
     assert parcel["receiver"] is None
     assert parcel["pickup_point"] == "EXAMPLE SERVICE POINT"
-    assert parcel["pickup"] is False
+    assert parcel["pickup"] is True
     assert parcel["weight"] == 0.2
     assert parcel["dimensions"] == {
         "length": 28.0,
@@ -231,7 +231,7 @@ def test_account_capabilities_match_what_the_normaliser_fills():
     assert {field for field, value in filled.items() if value is not None} == claimed
 
 
-def test_finished_return_is_delivered_and_keeps_its_text():
+def test_finished_return_is_finished_but_stays_returning():
     raw = account_active()
     raw["status"] = "RETURNED"
     raw["statusText"] = {"header": "Returned to sender"}
@@ -245,9 +245,10 @@ def test_finished_return_is_delivered_and_keeps_its_text():
         ),
     ]
     parcel = normalize_account_parcel(raw)
-    assert parcel["status"] == ParcelStatus.DELIVERED
+    assert parcel["status"] == ParcelStatus.RETURNING
     assert parcel["delivered"] is True
     assert parcel["delivered_at"] == "2026-05-13T20:55:00Z"
+    assert parcel["planned_from"] is None
     assert parcel["raw_status"] == "Returned to sender"
 
 

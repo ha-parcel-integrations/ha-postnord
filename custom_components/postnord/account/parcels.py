@@ -28,7 +28,12 @@ from ..tracking.parcels import (
     _pickup_point_name,
     _weight_kg,
     build_history,
-    settle_return,
+    is_pickup,
+    local_zone,
+    planned_for_status,
+    planned_window,
+    quiet_event_status,
+    return_is_settled,
     to_iso_timestamp,
     tracking_url,
 )
@@ -128,8 +133,21 @@ def normalize_account_parcel(raw: dict, *, include_history: bool = False) -> dic
     events = _flatten_events(raw)
     if status is ParcelStatus.IN_TRANSIT and _latest_event_is_out_for_delivery(events):
         status = ParcelStatus.OUT_FOR_DELIVERY
-    status = settle_return(status, events)
-    delivered = status is ParcelStatus.DELIVERED
+    delivered = status is ParcelStatus.DELIVERED or return_is_settled(status, events)
+    planned_from, planned_to = planned_for_status(
+        status,
+        *planned_window(
+            to_iso_timestamp(
+                raw.get("estimatedTimeOfArrival") or raw.get("publicTimeOfArrival")
+            ),
+            None,
+            zone=local_zone(),
+        ),
+    )
+    point_name = _pickup_point_name(raw, events)
+    pickup = is_pickup(
+        bool(point_name), status, (quiet_event_status(event) for event in events)
+    )
 
     status_text = _first_item(raw).get("statusText") or raw.get("statusText")
     raw_status = status_text.get("header") if isinstance(status_text, dict) else None
@@ -154,16 +172,10 @@ def normalize_account_parcel(raw: dict, *, include_history: bool = False) -> dic
             if delivered
             else None
         ),
-        # A single instant, as on the tracker; only a real window fills
-        # planned_to. Meaningless once delivered.
-        "planned_from": None
-        if delivered
-        else to_iso_timestamp(
-            raw.get("estimatedTimeOfArrival") or raw.get("publicTimeOfArrival")
-        ),
-        "planned_to": None,
-        "pickup": status is ParcelStatus.AT_PICKUP_POINT,
-        "pickup_point": _pickup_point_name(raw, events),
+        "planned_from": planned_from,
+        "planned_to": planned_to,
+        "pickup": pickup,
+        "pickup_point": point_name if pickup else None,
         "url": tracking_url(barcode),
         "weight": _weight_kg(raw),
         "dimensions": _dimensions_cm(raw),

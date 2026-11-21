@@ -41,6 +41,11 @@ Where this repo diverges from it, that is recorded below under
 - **Setup stale-entity sweep is scoped to `domain == "sensor"` and skips
   `non_parcel_unique_ids`** — else it deletes the refresh button / the
   summary+diagnostic sensors. Add a new non-parcel sensor's unique_id to the set.
+- **Pickup sensors**: `awaiting_pickup` (status `at_pickup_point`) and
+  `en_route_to_pickup_point` (`pickup` true, not yet at the point, not returning)
+  both always exist and read 0 until a parcel qualifies. `pickup` comes from
+  `is_pickup`, the service-point flag first. Pending: no real pickup-point parcel
+  has been seen on the account source yet.
 - **Per-parcel sensors are removed by the summary sensor** via
   `entity_registry.async_remove` (self-removal races and leaves ghosts).
 - **Every `entry.data.get(CONF_SOURCE, …)` defaults to `SOURCE_TRACKING`** —
@@ -62,7 +67,7 @@ re-export shims kept so existing imports still resolve
   contract both coordinators fire.
 - **The account normaliser reuses the tracker's field extractors**
   (`_flatten_events`, `_weight_kg`, `_dimensions_cm`, `_pickup_point_name`,
-  `build_history`, `settle_return`) because the account list carries the same
+  `build_history`, `return_is_settled`) because the account list carries the same
   shipment object, with different placement — confirmed on a real account
   response 2026-09-27 (`tests/account/payloads.py::captured_service_point_delivery`):
   `statusText` sits on each item, measurements are `items[].dimensions` /
@@ -106,11 +111,20 @@ re-export shims kept so existing imports still resolve
   an unknown status, so `build_history` carries the prior canonical status over
   it and `map_event_status` does not warn for it. A *shipment*-level `OTHER`
   still maps to `unknown` + WARNING.
-- **A finished return is `delivered`** (`settle_return`): PostNord ends a
-  return leg with a `DELIVERED` event while the shipment keeps `RETURNED`. Seen
-  in a real account history 2026-09-27. Same rule as bpost; `raw_status` keeps
-  the return text. Without it a finished return sits among the active parcels
-  forever, or, once archived, never shows as delivered.
+- **A finished return is `returning` with `delivered: true`**
+  (`return_is_settled`): PostNord ends a return leg with a `DELIVERED` event
+  while the shipment keeps `RETURNED`. Seen in a real account history
+  2026-09-27, where leaving it among the active parcels would park it there
+  forever (or, once archived, never show as delivered). So `delivered` is true
+  and the status stays `returning`, which fires `_status_changed` but no
+  `_delivered` event; `raw_status` keeps the return text.
+- **Parcel contract:** `tracking/parcels.py` holds the shared helpers
+  (`planned_window`, `planned_for_status`, `is_pickup`); the account source
+  imports them. The single-instant ETA runs to 23:59:59 of that day in Home
+  Assistant's zone and is emptied at `at_pickup_point`, `returning` and
+  `delivered`. `pickup` is a named delivery point, else a status/event that
+  reached `at_pickup_point`, so it stays true once collected; `pickup_point` is
+  only filled when `pickup` is true.
 
 **An entry's source is `entry.data[CONF_SOURCE]` (`tracking` / `account`).**
 Setup opens on a menu. The tracking hub keeps unique id `postnord`, and that
@@ -148,9 +162,8 @@ every account-payload PII key are in `TO_REDACT`;
 
 **Tracking source:**
 
-- **Keyless via a public web key** (`X-Bap-Key`), not a per-user credential — the
-  durable, whitelisted, human-readable kind, *not* the bpost/Evri
-  rotating-secret trap. There is **no reauth**: nothing is user-supplied to fix, so
+- **Keyless via a public web key** (`X-Bap-Key`), not a per-user credential; it
+  is whitelisted and stays the same between requests. There is **no reauth**: nothing is user-supplied to fix, so
   a retired key surfaces as an API error + one-shot warning, not a reauth prompt.
 - **`OTHER` status is deliberately left unmapped** (PostNord's own catch-all) →
   `unknown` + one-shot warning rather than a wrong bucket.

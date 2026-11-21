@@ -1,12 +1,13 @@
 """Tests for PostNord sensor property logic."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 from custom_components.postnord.const import ParcelStatus
 from custom_components.postnord.sensor import (
     PostNordAwaitingPickupSensor,
     PostNordDeliveredParcelsSensor,
+    PostNordEnRouteToPickupPointSensor,
     PostNordIncomingParcelsSensor,
     PostNordLastUpdateSensor,
     PostNordNextDeliverySensor,
@@ -32,6 +33,7 @@ def _parcel(
     status: ParcelStatus = ParcelStatus.IN_TRANSIT,
     pickup: bool = False,
     planned_from: str | None = None,
+    planned_to: str | None = None,
 ) -> dict:
     return {
         "carrier": "PostNord",
@@ -41,6 +43,7 @@ def _parcel(
         "status": status,
         "pickup": pickup,
         "planned_from": planned_from,
+        "planned_to": planned_to,
     }
 
 
@@ -62,6 +65,31 @@ def test_awaiting_pickup_counts_every_parcel_at_pickup_point():
     sensor = PostNordAwaitingPickupSensor(coordinator, _entry())
     assert sensor.native_value == 2
     assert len(sensor.extra_state_attributes["parcels"]) == 2
+
+
+def test_en_route_counts_only_active_pickup_parcels_not_yet_at_the_point():
+    coordinator = _coordinator(
+        [
+            _parcel("A", ParcelStatus.IN_TRANSIT, pickup=True),
+            _parcel("B", ParcelStatus.OUT_FOR_DELIVERY, pickup=True),
+            _parcel("C", ParcelStatus.IN_TRANSIT, pickup=False),
+            _parcel("D", ParcelStatus.AT_PICKUP_POINT, pickup=True),
+            _parcel("E", ParcelStatus.RETURNING, pickup=True),
+            _parcel("F", ParcelStatus.DELIVERED, pickup=True),
+        ]
+    )
+    sensor = PostNordEnRouteToPickupPointSensor(coordinator, _entry())
+    assert sensor.native_value == 2
+    assert [p["barcode"] for p in sensor.extra_state_attributes["parcels"]] == [
+        "A",
+        "B",
+    ]
+
+
+def test_en_route_is_empty_without_parcels():
+    sensor = PostNordEnRouteToPickupPointSensor(_coordinator([]), _entry())
+    assert sensor.native_value == 0
+    assert sensor.extra_state_attributes == {"parcels": []}
 
 
 def test_awaiting_pickup_is_empty_without_parcels():
@@ -86,12 +114,12 @@ def test_parcel_sensor_missing_barcode():
 def test_next_delivery_picks_earliest():
     coordinator = _coordinator(
         [
-            _parcel("A", planned_from="2026-05-02T10:00:00Z"),
-            _parcel("B", planned_from="2026-05-01T10:00:00Z"),
+            _parcel("A", planned_from="2099-05-02T10:00:00Z"),
+            _parcel("B", planned_from="2099-05-01T10:00:00Z"),
         ]
     )
     sensor = PostNordNextDeliverySensor(coordinator, _entry())
-    assert sensor.native_value == datetime(2026, 5, 1, 10, 0, tzinfo=UTC)
+    assert sensor.native_value == datetime(2099, 5, 1, 10, 0, tzinfo=UTC)
     assert sensor.extra_state_attributes["barcode"] == "B"
 
 
@@ -105,7 +133,7 @@ def test_next_delivery_skips_unparseable_moment():
     coordinator = _coordinator(
         [
             _parcel("A", planned_from="not-a-date"),
-            _parcel("B", planned_from="2026-05-01T10:00:00Z"),
+            _parcel("B", planned_from="2099-05-01T10:00:00Z"),
         ]
     )
     sensor = PostNordNextDeliverySensor(coordinator, _entry())
@@ -127,3 +155,23 @@ def test_last_update_sensor():
     coordinator.last_success_time = moment
     sensor = PostNordLastUpdateSensor(coordinator, _entry())
     assert sensor.native_value == moment
+
+
+def _in(**delta) -> str:
+    return (datetime.now(UTC) + timedelta(**delta)).isoformat()
+
+
+def test_next_delivery_skips_a_window_that_has_ended():
+    stale = _parcel("A", planned_from=_in(days=-3), planned_to=_in(days=-2))
+    moment_only = _parcel("B", planned_from=_in(hours=-2))
+    sensor = PostNordNextDeliverySensor(
+        _coordinator([stale, moment_only, _parcel("C", planned_from=_in(days=2))]),
+        _entry(),
+    )
+    assert sensor.extra_state_attributes["barcode"] == "C"
+
+
+def test_next_delivery_keeps_a_window_that_is_still_running():
+    running = _parcel("A", planned_from=_in(hours=-1), planned_to=_in(hours=2))
+    sensor = PostNordNextDeliverySensor(_coordinator([running]), _entry())
+    assert sensor.extra_state_attributes["barcode"] == "A"

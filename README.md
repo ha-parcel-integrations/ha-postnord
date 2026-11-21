@@ -133,6 +133,7 @@ Standard HA removal applies: **Settings → Devices & Services → PostNord → 
 | `sensor.postnord_parcel_<code>` | One per tracked parcel; state is the canonical status, attributes carry the full normalised parcel |
 | `sensor.postnord_next_delivery` | Earliest expected delivery moment across all active parcels |
 | `sensor.postnord_delivered_parcels` | Recently delivered parcels (see the retention option) |
+| `sensor.postnord_en_route_to_pickup_point` | Parcels still on their way to a pickup point |
 | `sensor.postnord_awaiting_pickup` | Parcels waiting for you at a pickup point |
 | `sensor.postnord_last_successful_update` | Diagnostic: when PostNord was last polled successfully |
 

@@ -59,10 +59,9 @@ CAPABILITIES = CAPABILITIES_BY_VARIANT["Tracking"]
 # identifier sent in the ``X-Bap-Key`` header (see ``TRACKING_BAP_KEY``); there
 # is no per-user credential to register.
 #
-# * ``X-Bap-Key`` is a fixed, public, human-readable web-client tag, not a
-#   rotating per-app secret — the durable, Cainiao-class end of the shared-key
-#   spectrum. Its value is a **strict whitelist**: an unknown value returns
-#   HTTP 403.
+# * ``X-Bap-Key`` is a fixed, public, human-readable web-client tag that stays
+#   the same between requests. Its value is a **strict whitelist**: an unknown
+#   value returns HTTP 403.
 # * Response is a ``TrackingInformationResponse`` envelope served as
 #   ``application/json`` (parsed with ``content_type=None`` to be safe). An
 #   unknown/not-yet-scanned code returns HTTP 200 with an **empty**
@@ -103,7 +102,7 @@ CONF_REFRESH_TOKEN = "refresh_token"
 CONF_REDIRECT_URL = "redirect_url"
 
 # The PostNord receiver app's account login: a public native OAuth client with
-# PKCE and no secret. Its only registered redirect is the app's own scheme, so
+# PKCE and no client password. Its only registered redirect is the app's own scheme, so
 # the browser cannot hand the code back to Home Assistant — the user pastes the
 # final redirect URL instead.
 ACCOUNT_AUTHORIZE_URL = "https://account.postnord.com/auth"
@@ -123,10 +122,10 @@ ACCOUNT_SCOPES = (
     "https://api.postnord.com/scopes/preferences/recipient",
 )
 ACCOUNT_TRACKING_URL = "https://api2.postnord.com/rest/customer/v2/receiverapp/tracking"
-# The receiver app's gateway subscription key and context header. Shared app
-# material, not a user secret: it can be rotated by PostNord independently of
-# any login, so a rejection is a compatibility failure, never a reauth prompt.
-# Must never reach the UI, diagnostics or a log line.
+# The receiver app's gateway subscription key and context header. PostNord can
+# change them independently of any login, so a rejection is a compatibility
+# failure, never a reauth prompt. Must never reach the UI, diagnostics or a log
+# line.
 ACCOUNT_API_KEY = "1ecf161be47543b19fce03f953a6e8d2"
 ACCOUNT_CONTEXT = "mobileapp"
 ACCOUNT_LOCALE = "en"

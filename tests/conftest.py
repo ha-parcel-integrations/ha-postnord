@@ -1,7 +1,9 @@
 """pytest configuration for the PostNord test suite."""
 
 import sys
+from unittest.mock import patch
 
+from homeassistant.util import dt as dt_util
 import pytest
 from pytest_homeassistant_custom_component.plugins import hass  # noqa: F401
 
@@ -56,3 +58,11 @@ if sys.platform == "win32":
     import homeassistant.helpers.aiohttp_client as _ha_aiohttp_client
 
     _ha_aiohttp_client.AsyncResolver = ThreadedResolver
+
+
+@pytest.fixture
+def amsterdam():
+    """Make Home Assistant's own zone Amsterdam for a pure normaliser test."""
+    zone = dt_util.get_time_zone("Europe/Amsterdam")
+    with patch.object(dt_util, "get_default_time_zone", return_value=zone):
+        yield zone
