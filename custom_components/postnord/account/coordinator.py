@@ -24,6 +24,7 @@ from ..const import (
     MID_INTERVAL_MINUTES,
     ParcelStatus,
 )
+from ..contents import ContentsStore, normalize_code
 from ..events import (
     fire_incoming_change_events,
     fire_outgoing_change_events,
@@ -76,6 +77,10 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
             update_interval=timedelta(minutes=MID_INTERVAL_MINUTES),
         )
         self._client = client
+        self.contents_store = ContentsStore(hass, entry.entry_id)
+        # Every code this entry lists, outgoing and delivered ones included:
+        # update_contents asks which entry a code belongs to.
+        self.known_codes: frozenset[str] = frozenset()
         self.delivered: list[dict] = []
         self.outgoing_active: list[dict] = []
         self.outgoing_delivered: list[dict] = []
@@ -111,6 +116,13 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
             self._cached_device_id = device.id
         return self._cached_device_id
 
+    def _apply_contents(self, parcel: dict) -> dict:
+        """Put the user's own contents text over the carrier's, when there is one."""
+        user_value = self.contents_store.get(parcel["barcode"])
+        if user_value is not None:
+            parcel["contents"] = user_value
+        return parcel
+
     async def _async_update_data(self) -> list[dict]:
         try:
             buckets = await self._client.async_get_tracking()
@@ -136,12 +148,18 @@ class PostNordAccountCoordinator(DataUpdateCoordinator[list[dict]]):
         # still fires its delivered event when it arrives.
         archived: set[str] = set()
         for raw in buckets["activeShipments"] + buckets["archivedShipments"]:
-            parcel = normalize_account_parcel(raw, include_history=include_history)
+            parcel = self._apply_contents(
+                normalize_account_parcel(raw, include_history=include_history)
+            )
             target = outgoing if is_outgoing(raw) else incoming
             if parcel["barcode"] and parcel["barcode"] not in target:
                 target[parcel["barcode"]] = parcel
                 if is_archived(raw):
                     archived.add(parcel["barcode"])
+
+        self.known_codes = frozenset(
+            normalize_code(code) for code in (*incoming, *outgoing)
+        )
 
         def is_listed_active(parcel: dict) -> bool:
             return not parcel["delivered"] and parcel["barcode"] not in archived

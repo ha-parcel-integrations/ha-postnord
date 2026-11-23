@@ -20,6 +20,7 @@ from .const import (
     SOURCE_ACCOUNT,
     SOURCE_TRACKING,
 )
+from .contents import ContentsStore
 from .services import async_setup_services, async_unload_services
 from .tracking.api import PostNordApiClient
 from .tracking.coordinator import PostNordCoordinator
@@ -77,6 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PostNordConfigEntry) -> 
     # cleanly (it logs a warning and half-sets-up the entry); doing the first
     # refresh here lets a transient failure fail the whole entry so HA retries
     # it with backoff.
+    await coordinator.contents_store.async_load()
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = PostNordData(client=client, coordinator=coordinator)
@@ -91,8 +93,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PostNordConfigEntry) -> 
     # refresh, which recomputes the tier and re-arms scheduling.
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
-    if not is_account:
-        async_setup_services(hass)
+    async_setup_services(hass, hub=not is_account)
 
     return True
 
@@ -108,24 +109,24 @@ async def async_unload_entry(hass: HomeAssistant, entry: PostNordConfigEntry) ->
     """Unload the PostNord config entry."""
     if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False
-    # The services belong to the tracking hub; an account entry unloading must
-    # not take them away from a tracking hub that is still loaded.
-    others_loaded = any(
-        other.entry_id != entry.entry_id
-        and other.state is ConfigEntryState.LOADED
-        and other.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_TRACKING
+    # Drop a service when the last entry that needs it goes, so unloading one
+    # entry never breaks the others.
+    others = [
+        other
         for other in hass.config_entries.async_entries(DOMAIN)
+        if other.entry_id != entry.entry_id and other.state is ConfigEntryState.LOADED
+    ]
+    hubs_left = any(
+        other.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_TRACKING
+        for other in others
     )
-    if (
-        entry.data.get(CONF_SOURCE, SOURCE_TRACKING) == SOURCE_TRACKING
-        and not others_loaded
-    ):
-        async_unload_services(hass)
+    async_unload_services(hass, hubs_left=hubs_left, entries_left=bool(others))
     return True
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: PostNordConfigEntry) -> None:
-    """End an account entry's login, so its refresh token in a backup is useless."""
+    """Delete the entry's contents and end an account's login."""
+    await ContentsStore(hass, entry.entry_id).async_remove()
     if entry.data.get(CONF_SOURCE, SOURCE_TRACKING) != SOURCE_ACCOUNT:
         return
     refresh_token = entry.data.get(CONF_REFRESH_TOKEN)

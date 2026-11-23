@@ -164,6 +164,7 @@ def normalize_account_parcel(raw: dict, *, include_history: bool = False) -> dic
         "receiver": (consignee.get("name") or None)
         if isinstance(consignee, dict)
         else None,
+        "contents": None,
         "status": status,
         "raw_status": raw_status or status_code,
         "delivered": delivered,

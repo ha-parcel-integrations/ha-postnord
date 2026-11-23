@@ -183,10 +183,13 @@ Every payload is the full normalised parcel plus the hub's `device_id`. Events a
 
 | Service | Fields | Description |
 |---|---|---|
-| `postnord.track_parcel` | `tracking_code` | Start tracking a parcel |
+| `postnord.track_parcel` | `tracking_code`, `contents` (optional) | Start tracking a parcel, optionally noting what is in it |
 | `postnord.untrack_parcel` | `tracking_code` | Stop tracking a parcel |
+| `postnord.update_contents` | `tracking_code`, `contents`, `config_entry_id` (optional) | Set what is in a parcel, tracked or not; an empty `contents` clears it. It goes to every account or hub that lists the code; name one with `config_entry_id` (needed for a code none lists yet). |
 
-Both act on the tracking-code hub only, and are not registered while only an account is set up — an account imports its parcels by itself.
+`track_parcel` and `untrack_parcel` act on the tracking-code hub only, and are not registered while only an account is set up — an account imports its parcels by itself. `update_contents` works with any set-up entry.
+
+The `contents` text you set titles the parcel's calendar event and shows on the next-delivery sensor.
 
 ## Examples
 

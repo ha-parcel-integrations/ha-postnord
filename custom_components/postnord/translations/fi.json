@@ -89,6 +89,10 @@
         "tracking_code": {
           "name": "Seurantakoodi",
           "description": "PostNord-seurantakoodi."
+        },
+        "contents": {
+          "name": "Sisältö",
+          "description": "Mitä paketissa on, omin sanoin. Kutsuminen uudelleen seurattavalle paketille korvaa sisällön; tyhjä teksti tyhjentää sen."
         }
       }
     },
@@ -99,6 +103,24 @@
         "tracking_code": {
           "name": "Seurantakoodi",
           "description": "PostNord-seurantakoodi, jonka seuranta lopetetaan."
+        }
+      }
+    },
+    "update_contents": {
+      "name": "Päivitä paketin sisältö",
+      "description": "Aseta seurantakoodille omin sanoin, mitä paketissa on. Tyhjä teksti tyhjentää sisällön.",
+      "fields": {
+        "tracking_code": {
+          "name": "Seurantakoodi",
+          "description": "PostNord-seurantakoodi."
+        },
+        "contents": {
+          "name": "Sisältö",
+          "description": "Mitä paketissa on, omin sanoin. Tyhjä teksti tyhjentää sen."
+        },
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Tili, jolle arvo tallennetaan. Tarvitaan, kun mikään tili ei vielä tunne koodia."
         }
       }
     }
@@ -158,6 +180,11 @@
       "parcel": {
         "name": "Paketti {barcode}"
       }
+    }
+  },
+  "exceptions": {
+    "update_contents_entry_required": {
+      "message": "Mikään tili ei tunne tätä koodia. Valitse tili, jolle se tallennetaan."
     }
   }
 }

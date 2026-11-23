@@ -24,6 +24,7 @@ TO_REDACT = {
     "barcode",
     "sender",
     "receiver",
+    "contents",
     "url",
     # PostNord raw payload blocks
     "consignor",
